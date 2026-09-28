@@ -108,6 +108,9 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
 .viz{grid-area:viz;min-width:0}
 .details{grid-area:details;min-width:0}
 .details .cols{margin-top:0}
+@media (max-width:759px){
+  .viz .hex{width:calc(100% + 36px);max-width:none;margin:0 -18px}
+}
 @media (min-width:760px){
   .opts{grid-template-columns:repeat(3,1fr)}
   .qtext{font-size:1.75rem}
@@ -117,10 +120,10 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
   .home .saved{margin-top:0}
 }
 @media (min-width:960px){
-  .result{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"viz filters" "viz details";column-gap:48px;align-items:start}
+  .result{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"viz filters" "viz details";column-gap:48px;align-items:start}
   .ranking{flex-wrap:wrap;overflow:visible}
   .viz{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
-  .hex{max-width:540px}
+  .hex{max-width:620px}
   .score .display{font-size:3.6rem}
 }
 .analysis{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
@@ -154,6 +157,14 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
 .bt i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
 .bt em{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;background:var(--want);border-radius:2px}
 .bv{text-align:right;font-weight:600}
+.steps{list-style:none;display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding:2px 0 6px;scrollbar-width:thin}
+.step{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.82rem;color:var(--muted);white-space:nowrap}
+.step small{margin-left:6px;opacity:.8}
+.step.done{color:var(--good);border-color:var(--good)}
+.step.current{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.resume{border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:14px;padding:14px;margin-bottom:18px}
+.resume p{margin:0 0 10px}
+.resume .cta{margin-top:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -165,7 +176,7 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
       <button data-theme-set="auto" aria-label="Thème automatique" title="Automatique"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></button><button data-theme-set="light" aria-label="Thème clair" title="Clair"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button data-theme-set="dark" aria-label="Thème sombre" title="Sombre"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
     </div>
   </header>
-  <p class="lead">Quarante questions sur ce qui compte vraiment pour toi, comparées à 183 pays. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
+  <p class="lead">Une vingtaine de questions sur ce qui compte vraiment pour toi, comparées à 183 pays. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
   <section id="app"></section>
 </main>
 
@@ -187,17 +198,26 @@ const AXES = [
   {id:'ali', label:'Qualité de l’alimentation', short:'Alimentation'},
   {id:'bie', label:'Bien-être et environnement', short:'Bien-être'},
   {id:'cou', label:'Coût de la vie abordable', short:'Coût'},
-  {id:'pou', label:'Pouvoir d’achat local', short:'Pouvoir d’achat'}
+  {id:'pou', label:'Pouvoir d’achat local', short:'Pouvoir d’achat'},
+  {id:'cli', label:'Climat (0 = froid, 10 = tropical)', short:'Climat', mode:'target'},
+  {id:'aut', label:'Vie autonome (terrain, potager, système D)', short:'Autonomie'},
+  {id:'sej', label:'Facilité d’installation (visa, séjour)', short:'Séjour'},
+  {id:'lan', label:'Langue accessible pour un francophone', short:'Langue'},
+  {id:'dis', label:'Proximité avec la France', short:'Distance'}
 ];
 
 // Familles affichées sur l'hexagone
 const FAMILIES = [
-  {label:'Libertés et démocratie', short:'Libertés', axes:['lib','dem','eta']},
+  {label:'Libertés', short:'Libertés', axes:['lib','eta']},
+  {label:'Démocratie et gouvernance', short:'Démocratie', axes:['dem','gov']},
+  {label:'Sécurité', short:'Sécurité', axes:['sec']},
   {label:'Entreprendre', short:'Entreprendre', axes:['ent','cul']},
   {label:'Fiscalité et patrimoine', short:'Fiscalité', axes:['fis','suc']},
-  {label:'Sécurité et gouvernance', short:'Sécurité', axes:['sec','gov']},
   {label:'Coût de la vie', short:'Coût de la vie', axes:['cou','pou']},
-  {label:'Qualité de vie', short:'Qualité de vie', axes:['viv','san','ali','bie','edu']}
+  {label:'Santé et bien-être', short:'Santé', axes:['san','bie','ali']},
+  {label:'Famille et art de vivre', short:'Art de vivre', axes:['edu','viv']},
+  {label:'Climat et vie autonome', short:'Climat et nature', axes:['cli','aut']},
+  {label:'S’installer depuis la France', short:'Installation', axes:['sej','lan','dis']}
 ];
 
 // req = niveau exigé (0-10), w = poids (importance)
@@ -361,194 +381,227 @@ const QUESTIONS = [
   {axis:'pou', q:'Avec un salaire local, une fois le loyer et les courses payés, il doit te rester…', opts:[
     {t:'De quoi vivre confortablement', req:9, w:2},
     {t:'Un reste correct', req:6, w:1},
-    {t:'Pas concerné', req:0, w:0}]}
+    {t:'Pas concerné', req:0, w:0}]},
+  {axis:'cli', q:'Le climat idéal pour toi ?', opts:[
+    {t:'Chaud toute l’année', s:'Tropical', req:10, w:3},
+    {t:'Étés chauds et secs, hivers doux', s:'Méditerranéen', req:7, w:3},
+    {t:'Tempéré, avec quatre saisons', req:4, w:3},
+    {t:'Frais, voire froid : j’aime l’hiver', req:1, w:3},
+    {t:'Peu importe', req:5, w:0}]},
+  {axis:'aut', q:'Vivre de façon indépendante (potager, poules, récupération d’eau, système D), c’est…', opts:[
+    {t:'Mon projet de vie', req:10, w:2.5},
+    {t:'Un petit potager me suffirait', req:6, w:1},
+    {t:'Pas mon truc', req:0, w:0}]},
+  {axis:'aut', q:'Acheter un terrain et construire ou aménager sans trop de paperasse, c’est…', opts:[
+    {t:'Indispensable', req:10, w:2},
+    {t:'Souhaitable', req:6, w:1},
+    {t:'Pas concerné', req:0, w:0}]},
+  {axis:'sej', q:'T’installer sans parcours du combattant administratif (visa, titre de séjour), c’est…', opts:[
+    {t:'Indispensable', s:'Idéalement sans visa, comme dans l’Union européenne', req:10, w:3},
+    {t:'Important', req:7, w:1.5},
+    {t:'Je suis prêt à faire les démarches', req:3, w:0.5}]},
+  {axis:'lan', q:'Au quotidien, tu veux pouvoir parler…', opts:[
+    {t:'Français', s:'Pays francophone', req:10, w:3},
+    {t:'Français, anglais ou une langue latine', s:'Espagnol, italien, portugais', req:7, w:2},
+    {t:'N’importe quelle langue, j’apprendrai', req:0, w:0}]},
+  {axis:'dis', q:'Pour rentrer en France voir ta famille, tu acceptes…', opts:[
+    {t:'Quelques heures de vol au maximum', req:9, w:2.5},
+    {t:'Une demi-journée de voyage', req:6, w:1.5},
+    {t:'Peu importe la distance', req:0, w:0}]},
+  {axis:null, gate:'kids', q:'As-tu des enfants, ou en prévois-tu, qui iront à l’école sur place ?', opts:[
+    {t:'Oui'},
+    {t:'Non', s:'Les questions sur l’école seront passées'}]},
+  {axis:null, gate:'income', q:'Sur place, tu vivras surtout…', opts:[
+    {t:'D’un salaire local'},
+    {t:'De revenus venant de l’étranger', s:'Télétravail, retraite, rentes'},
+    {t:'De ma propre entreprise'}]}
 ];
 
-// Estimations 0-10 calibrées sur des indices publics : [lib, ent, suc, sec, viv, fis, edu, cul, gov, eta, dem, san, ali, bie, cou, pou]
+// Estimations 0-10 calibrées sur des indices publics : [lib, ent, suc, sec, viv, fis, edu, cul, gov, eta, dem, san, ali, bie, cou, pou, cli, aut, sej, lan, dis]
 const COUNTRIES = [
-  {n:'France', r:'Europe', v:[8,6,1,6,9,2,7,5,7,1,6,8,10,7,4,6]},
-  {n:'Belgique', r:'Europe', v:[8,6,1,6,7,2,7,5,7,2,6,8,8,7,4,7]},
-  {n:'Luxembourg', r:'Europe', v:[9,8,9,9,7,4,7,6,9,4,7,9,8,8,2,9]},
-  {n:'Pays-Bas', r:'Europe', v:[9,8,4,8,7,2,8,8,9,4,7,9,7,9,3,7]},
-  {n:'Allemagne', r:'Europe', v:[8,7,4,7,6,3,7,5,8,3,7,8,7,8,4,7]},
-  {n:'Autriche', r:'Europe', v:[8,7,10,9,7,1,7,5,8,2,7,9,8,8,4,7]},
-  {n:'Suisse', r:'Europe', v:[9,8,8,10,7,6,9,7,10,7,10,10,8,9,1,9]},
-  {n:'Liechtenstein', r:'Europe', v:[8,8,10,10,6,8,8,7,9,7,9,9,8,9,1,9]},
-  {n:'Monaco', r:'Europe', v:[7,8,10,10,8,2,8,6,7,6,4,9,9,8,1,6]},
-  {n:'Andorre', r:'Europe', v:[8,7,10,10,7,9,7,6,7,7,7,8,8,8,4,6]},
-  {n:'Saint-Marin', r:'Europe', v:[8,6,8,9,6,6,7,5,6,5,7,8,9,8,4,6]},
-  {n:'Italie', r:'Europe', v:[8,5,7,6,9,3,6,5,6,2,8,8,10,7,5,5]},
-  {n:'Espagne', r:'Europe', v:[8,6,6,7,10,3,6,5,7,4,7,8,9,8,6,5]},
-  {n:'Portugal', r:'Europe', v:[9,6,9,9,9,3,7,6,7,4,7,7,9,8,6,3]},
-  {n:'Malte', r:'Europe', v:[8,7,8,8,8,5,6,6,6,5,7,7,7,7,5,5]},
-  {n:'Chypre', r:'Europe', v:[8,7,10,8,8,5,6,6,6,5,7,7,8,7,5,5]},
-  {n:'Grèce', r:'Europe', v:[8,5,6,7,9,4,6,5,5,3,7,6,9,7,6,3]},
-  {n:'Royaume-Uni', r:'Europe', v:[8,8,3,6,6,3,8,8,8,4,7,6,6,7,3,5]},
-  {n:'Irlande', r:'Europe', v:[9,8,3,9,7,3,8,8,9,7,8,7,7,7,3,6]},
-  {n:'Islande', r:'Europe', v:[9,7,5,10,6,4,7,7,9,4,8,8,7,9,2,7]},
-  {n:'Norvège', r:'Europe', v:[9,7,10,9,6,3,7,6,10,3,8,9,7,9,2,8]},
-  {n:'Suède', r:'Europe', v:[9,8,10,7,6,2,7,8,9,3,8,8,7,8,4,7]},
-  {n:'Danemark', r:'Europe', v:[9,9,4,9,7,2,8,8,10,2,8,8,7,9,3,8]},
-  {n:'Finlande', r:'Europe', v:[9,8,3,9,6,2,9,6,10,2,8,8,7,9,4,7]},
-  {n:'Estonie', r:'Europe', v:[9,9,10,8,5,7,10,9,9,6,7,7,6,7,5,6]},
-  {n:'Lettonie', r:'Europe', v:[8,7,10,7,5,6,7,7,7,5,7,6,6,6,6,5]},
-  {n:'Lituanie', r:'Europe', v:[8,8,8,7,5,6,7,7,7,5,7,6,6,6,6,5]},
-  {n:'Pologne', r:'Europe', v:[7,7,9,8,6,6,8,7,7,4,7,6,7,6,7,6]},
-  {n:'Tchéquie', r:'Europe', v:[8,8,10,9,6,7,7,6,7,5,7,8,6,7,6,6]},
-  {n:'Slovaquie', r:'Europe', v:[7,6,10,8,5,7,6,5,6,4,6,6,6,6,6,5]},
-  {n:'Hongrie', r:'Europe', v:[6,7,10,8,6,8,6,5,5,3,5,6,7,6,7,5]},
-  {n:'Slovénie', r:'Europe', v:[8,6,9,9,6,3,8,6,7,3,7,8,7,8,6,6]},
-  {n:'Croatie', r:'Europe', v:[7,6,10,8,8,5,6,5,6,4,6,6,8,8,6,5]},
-  {n:'Serbie', r:'Europe', v:[6,6,9,7,6,8,5,5,4,4,5,5,7,6,8,4]},
-  {n:'Bosnie-Herzégovine', r:'Europe', v:[6,5,9,6,6,9,4,5,3,4,5,4,6,6,8,2]},
-  {n:'Monténégro', r:'Europe', v:[7,6,9,7,7,8,5,5,5,4,6,5,6,7,6,3]},
-  {n:'Macédoine du Nord', r:'Europe', v:[7,6,9,7,6,9,4,5,4,5,6,4,6,6,8,2]},
-  {n:'Albanie', r:'Europe', v:[7,6,9,7,7,7,4,6,4,6,6,4,6,7,8,2]},
-  {n:'Kosovo', r:'Europe', v:[7,6,9,7,6,8,4,6,4,5,6,4,6,6,8,2]},
-  {n:'Roumanie', r:'Europe', v:[7,6,10,7,6,9,5,6,5,5,6,5,7,6,8,5]},
-  {n:'Bulgarie', r:'Europe', v:[7,7,10,7,7,9,5,6,4,6,6,5,7,6,8,5]},
-  {n:'Moldavie', r:'Europe', v:[7,5,9,6,5,8,4,5,4,5,6,4,6,6,8,2]},
-  {n:'Ukraine', r:'Europe', v:[5,4,9,1,5,8,6,6,4,4,5,4,7,3,8,3]},
-  {n:'Biélorussie', r:'Europe', v:[3,3,8,5,4,8,6,3,2,1,2,4,6,4,6,2]},
-  {n:'Russie', r:'Europe', v:[3,4,10,3,5,8,6,4,2,2,1,5,6,4,7,4]},
-  {n:'Géorgie', r:'Europe', v:[8,8,9,7,8,8,5,7,6,7,6,5,8,7,8,3]},
-  {n:'Arménie', r:'Europe', v:[7,7,10,7,6,8,5,6,5,6,6,5,8,6,8,3]},
-  {n:'Azerbaïdjan', r:'Europe', v:[4,5,9,6,5,6,4,5,2,3,3,3,6,6,8,1]},
-  {n:'Turquie', r:'Europe', v:[5,6,7,5,8,4,5,7,3,4,4,6,8,6,8,3]},
-  {n:'Japon', r:'Asie', v:[8,7,1,10,8,1,9,3,8,5,6,9,10,5,5,6]},
-  {n:'Corée du Sud', r:'Asie', v:[8,8,1,9,7,3,9,5,7,6,7,9,8,4,5,6]},
-  {n:'Taïwan', r:'Asie', v:[9,9,6,9,8,4,9,7,8,6,8,9,8,6,6,6]},
-  {n:'Chine', r:'Asie', v:[2,4,10,7,5,3,8,7,4,1,0,6,5,4,7,5]},
-  {n:'Hong Kong', r:'Asie', v:[5,9,10,8,7,8,9,7,7,8,2,9,8,5,2,4]},
-  {n:'Macao', r:'Asie', v:[5,7,10,9,6,8,8,6,6,6,4,7,6,8,6,5]},
-  {n:'Mongolie', r:'Asie', v:[7,6,9,6,4,8,4,6,4,5,6,4,6,5,8,2]},
-  {n:'Singapour', r:'Asie', v:[5,10,10,10,7,7,10,8,10,7,4,10,8,6,2,7]},
-  {n:'Malaisie', r:'Asie', v:[5,7,10,7,7,6,6,6,5,6,5,7,7,6,8,5]},
-  {n:'Thaïlande', r:'Asie', v:[6,6,8,5,10,5,5,7,4,5,4,7,8,7,8,4]},
-  {n:'Vietnam', r:'Asie', v:[4,6,8,7,8,5,7,8,4,2,1,6,8,6,9,4]},
-  {n:'Cambodge', r:'Asie', v:[4,5,9,5,7,7,3,7,2,4,2,4,7,6,8,2]},
-  {n:'Laos', r:'Asie', v:[3,4,9,6,6,6,3,6,3,2,2,3,6,6,8,1]},
-  {n:'Birmanie', r:'Asie', v:[2,2,8,1,5,5,2,5,1,2,1,2,6,3,8,1]},
-  {n:'Philippines', r:'Asie', v:[6,5,6,4,8,5,3,7,3,6,6,5,5,6,8,3]},
-  {n:'Indonésie', r:'Asie', v:[5,6,9,6,8,4,4,8,4,6,6,5,7,6,9,3]},
-  {n:'Brunei', r:'Asie', v:[3,6,10,9,4,10,6,4,6,3,2,6,6,6,6,4]},
-  {n:'Timor oriental', r:'Asie', v:[6,4,9,6,5,6,3,5,4,5,5,4,6,6,8,2]},
-  {n:'Inde', r:'Asie', v:[5,6,10,5,7,4,5,8,4,5,6,5,5,3,9,3]},
-  {n:'Pakistan', r:'Asie', v:[3,4,10,3,5,5,3,6,3,4,2,3,6,4,8,1]},
-  {n:'Bangladesh', r:'Asie', v:[4,4,8,4,4,5,3,6,3,5,3,3,6,4,8,1]},
-  {n:'Sri Lanka', r:'Asie', v:[6,5,10,6,7,5,5,6,4,5,5,6,6,6,8,2]},
-  {n:'Népal', r:'Asie', v:[6,4,9,6,6,5,3,6,3,5,5,3,6,6,8,1]},
-  {n:'Bhoutan', r:'Asie', v:[5,4,9,8,5,5,4,5,7,4,4,6,6,6,8,4]},
-  {n:'Maldives', r:'Asie', v:[5,5,10,7,8,7,4,6,4,5,4,4,6,8,8,2]},
-  {n:'Kazakhstan', r:'Asie', v:[5,6,10,6,5,9,6,6,4,4,2,5,6,5,8,4]},
-  {n:'Ouzbékistan', r:'Asie', v:[4,5,9,7,5,8,5,6,3,3,3,4,6,6,6,2]},
-  {n:'Kirghizistan', r:'Asie', v:[5,5,9,6,5,9,4,6,3,5,4,4,6,6,8,2]},
-  {n:'Tadjikistan', r:'Asie', v:[3,3,8,6,4,8,3,5,2,2,2,2,6,5,8,1]},
-  {n:'Turkménistan', r:'Asie', v:[1,2,8,6,3,8,3,2,1,1,0,2,6,4,8,1]},
-  {n:'Afghanistan', r:'Asie', v:[0,1,8,0,1,6,1,4,1,1,0,1,6,0,8,1]},
-  {n:'Corée du Nord', r:'Asie', v:[0,0,5,4,1,5,3,0,0,0,0,2,6,2,8,1]},
-  {n:'Émirats arabes unis', r:'Moyen-Orient', v:[4,9,10,10,7,10,7,9,8,5,1,8,7,6,4,8]},
-  {n:'Qatar', r:'Moyen-Orient', v:[4,8,10,10,6,10,7,7,7,4,1,8,6,6,4,9]},
-  {n:'Bahreïn', r:'Moyen-Orient', v:[4,8,10,8,6,10,6,7,5,4,1,7,6,6,5,7]},
-  {n:'Koweït', r:'Moyen-Orient', v:[4,6,10,8,5,10,5,5,5,3,3,7,5,5,5,8]},
-  {n:'Oman', r:'Moyen-Orient', v:[4,7,10,9,6,10,5,6,6,4,2,7,6,6,5,7]},
-  {n:'Arabie saoudite', r:'Moyen-Orient', v:[2,7,10,8,5,10,5,7,5,2,0,7,5,5,5,7]},
-  {n:'Israël', r:'Moyen-Orient', v:[7,7,10,5,8,2,7,10,7,4,7,8,8,6,2,5]},
-  {n:'Jordanie', r:'Moyen-Orient', v:[5,6,10,7,6,6,5,6,5,5,3,6,7,5,6,3]},
-  {n:'Liban', r:'Moyen-Orient', v:[6,4,6,4,8,5,5,7,2,5,4,5,8,5,6,2]},
-  {n:'Iran', r:'Moyen-Orient', v:[1,2,7,5,4,5,5,5,2,1,0,4,6,4,6,2]},
-  {n:'Irak', r:'Moyen-Orient', v:[3,3,8,2,4,7,3,5,2,3,2,2,6,3,8,1]},
-  {n:'Syrie', r:'Moyen-Orient', v:[1,1,6,0,2,7,2,4,1,1,0,2,6,1,8,1]},
-  {n:'Yémen', r:'Moyen-Orient', v:[1,1,8,0,1,6,1,4,1,2,0,1,6,0,8,1]},
-  {n:'Égypte', r:'Afrique', v:[3,4,10,6,6,5,4,6,3,3,1,4,6,4,9,2]},
-  {n:'Maroc', r:'Afrique', v:[5,6,10,7,8,4,4,6,5,4,3,5,7,6,8,3]},
-  {n:'Algérie', r:'Afrique', v:[3,3,7,6,5,4,4,4,3,2,2,4,6,6,8,2]},
-  {n:'Tunisie', r:'Afrique', v:[5,5,8,6,7,4,5,5,4,3,4,5,7,6,8,3]},
-  {n:'Libye', r:'Afrique', v:[2,2,8,1,3,8,3,4,1,3,1,2,6,2,8,1]},
-  {n:'Mauritanie', r:'Afrique', v:[3,4,8,5,3,6,2,5,3,5,2,2,6,4,8,1]},
-  {n:'Sénégal', r:'Afrique', v:[6,5,8,6,7,5,3,7,5,5,6,4,6,6,7,2]},
-  {n:"Côte d'Ivoire", r:'Afrique', v:[5,5,7,5,6,5,3,7,4,5,4,4,6,6,8,2]},
-  {n:'Ghana', r:'Afrique', v:[7,5,9,7,6,5,4,7,5,5,6,4,6,6,7,2]},
-  {n:'Nigeria', r:'Afrique', v:[4,4,9,2,4,6,3,8,3,5,3,3,6,3,8,1]},
-  {n:'Bénin', r:'Afrique', v:[6,5,8,6,5,5,3,6,5,5,5,4,6,6,8,2]},
-  {n:'Togo', r:'Afrique', v:[5,5,8,6,5,5,3,6,3,4,4,3,6,6,8,1]},
-  {n:'Burkina Faso', r:'Afrique', v:[4,4,8,1,3,6,2,6,3,4,3,2,6,2,8,1]},
-  {n:'Mali', r:'Afrique', v:[3,4,8,1,3,6,2,6,2,4,2,2,6,2,8,1]},
-  {n:'Niger', r:'Afrique', v:[3,3,8,2,2,6,1,5,3,4,2,2,6,2,8,1]},
-  {n:'Cap-Vert', r:'Afrique', v:[8,6,9,7,7,6,5,6,7,5,7,4,6,7,7,3]},
-  {n:'Gambie', r:'Afrique', v:[6,5,8,6,5,6,3,6,4,5,5,4,6,6,8,2]},
-  {n:'Guinée', r:'Afrique', v:[4,4,8,4,3,6,2,6,2,4,3,2,6,4,8,1]},
-  {n:'Guinée-Bissau', r:'Afrique', v:[5,3,8,5,4,6,2,5,2,5,4,2,6,4,8,1]},
-  {n:'Sierra Leone', r:'Afrique', v:[6,4,8,6,4,6,2,6,3,5,5,2,6,5,8,1]},
-  {n:'Libéria', r:'Afrique', v:[6,4,8,5,4,6,2,6,3,5,5,2,6,4,8,1]},
-  {n:'Cameroun', r:'Afrique', v:[3,4,6,3,4,5,3,6,2,4,2,2,6,4,8,1]},
-  {n:'Gabon', r:'Afrique', v:[5,5,8,6,5,5,4,5,3,4,4,4,6,6,8,2]},
-  {n:'Guinée équatoriale', r:'Afrique', v:[2,3,8,6,3,6,3,4,1,2,1,2,6,4,8,1]},
-  {n:'São Tomé-et-Principe', r:'Afrique', v:[7,4,8,7,5,6,4,5,5,5,6,4,6,6,8,2]},
-  {n:'Congo', r:'Afrique', v:[4,3,7,4,4,4,3,5,2,3,3,2,6,4,8,1]},
-  {n:'RD Congo', r:'Afrique', v:[3,2,7,1,3,5,2,6,1,4,2,2,6,2,8,1]},
-  {n:'Tchad', r:'Afrique', v:[2,2,8,2,2,5,1,5,2,4,1,2,6,2,8,1]},
-  {n:'Centrafrique', r:'Afrique', v:[2,1,8,0,2,5,1,4,1,4,1,1,6,1,8,1]},
-  {n:'Soudan', r:'Afrique', v:[1,1,8,0,1,6,2,5,1,2,0,2,6,0,8,1]},
-  {n:'Soudan du Sud', r:'Afrique', v:[1,1,8,0,1,6,1,4,1,4,0,1,6,0,8,1]},
-  {n:'Éthiopie', r:'Afrique', v:[3,3,9,2,4,6,3,6,3,2,2,3,6,3,8,1]},
-  {n:'Érythrée', r:'Afrique', v:[1,1,8,4,2,6,2,2,1,0,0,2,6,3,8,1]},
-  {n:'Djibouti', r:'Afrique', v:[4,4,8,6,4,5,3,5,3,3,3,3,6,5,8,1]},
-  {n:'Somalie', r:'Afrique', v:[1,1,8,0,1,7,1,6,1,6,0,1,6,0,8,1]},
-  {n:'Kenya', r:'Afrique', v:[6,6,10,5,7,5,5,8,4,6,5,4,6,6,7,3]},
-  {n:'Ouganda', r:'Afrique', v:[4,5,9,5,5,5,4,8,3,5,3,4,6,5,8,2]},
-  {n:'Tanzanie', r:'Afrique', v:[5,5,9,6,7,5,3,6,4,5,4,4,6,6,8,2]},
-  {n:'Rwanda', r:'Afrique', v:[4,7,9,8,5,5,4,8,6,4,2,5,5,7,7,2]},
-  {n:'Burundi', r:'Afrique', v:[2,2,8,4,3,5,2,5,2,3,1,2,6,4,8,1]},
-  {n:'Mozambique', r:'Afrique', v:[5,4,7,3,6,5,2,5,3,5,4,2,6,4,8,1]},
-  {n:'Madagascar', r:'Afrique', v:[5,4,7,5,6,6,3,5,3,5,4,3,6,6,8,1]},
-  {n:'Maurice', r:'Afrique', v:[8,8,10,8,8,7,6,6,7,6,7,6,7,7,7,5]},
-  {n:'Seychelles', r:'Afrique', v:[7,6,10,8,8,6,6,5,7,5,6,6,7,8,5,5]},
-  {n:'Comores', r:'Afrique', v:[5,3,8,6,5,5,3,5,3,5,4,3,6,6,8,1]},
-  {n:'Afrique du Sud', r:'Afrique', v:[7,6,3,2,7,3,5,6,5,4,7,5,7,5,7,4]},
-  {n:'Namibie', r:'Afrique', v:[8,6,9,5,7,4,4,6,6,4,7,4,6,7,7,3]},
-  {n:'Botswana', r:'Afrique', v:[7,7,7,6,6,6,5,6,7,5,6,5,6,7,7,4]},
-  {n:'Zimbabwe', r:'Afrique', v:[3,2,7,5,4,4,4,6,2,2,2,3,6,4,8,1]},
-  {n:'Zambie', r:'Afrique', v:[6,5,9,6,5,5,3,6,4,5,5,4,6,6,8,2]},
-  {n:'Malawi', r:'Afrique', v:[6,4,8,6,4,5,2,6,4,5,5,3,6,5,8,1]},
-  {n:'Angola', r:'Afrique', v:[4,3,8,5,5,5,3,6,3,3,3,3,6,5,8,1]},
-  {n:'Eswatini', r:'Afrique', v:[3,4,8,5,4,5,3,5,3,3,2,3,6,4,8,1]},
-  {n:'Lesotho', r:'Afrique', v:[6,4,8,5,4,5,3,5,4,4,5,4,6,4,8,2]},
-  {n:'Canada', r:'Amériques', v:[9,8,7,9,7,3,9,8,9,4,7,7,7,8,4,6]},
-  {n:'États-Unis', r:'Amériques', v:[8,8,9,5,8,5,8,10,7,6,8,6,5,5,3,8]},
-  {n:'Mexique', r:'Amériques', v:[6,6,10,3,9,5,5,7,3,6,6,5,7,6,7,4]},
-  {n:'Guatemala', r:'Amériques', v:[5,5,6,4,6,8,3,7,3,6,4,3,6,5,8,1]},
-  {n:'Belize', r:'Amériques', v:[7,5,10,5,7,6,4,6,4,6,6,4,6,6,8,2]},
-  {n:'Honduras', r:'Amériques', v:[5,5,8,3,6,6,3,6,2,6,4,2,6,4,8,1]},
-  {n:'Salvador', r:'Amériques', v:[4,6,10,6,6,6,3,6,3,4,3,3,6,6,8,1]},
-  {n:'Nicaragua', r:'Amériques', v:[2,3,9,5,5,6,3,4,1,2,1,4,6,6,8,2]},
-  {n:'Costa Rica', r:'Amériques', v:[9,6,10,6,9,8,6,7,6,5,7,7,7,9,5,4]},
-  {n:'Panama', r:'Amériques', v:[8,7,10,6,8,8,5,7,4,7,6,6,6,7,6,5]},
-  {n:'Cuba', r:'Amériques', v:[1,1,5,6,6,4,5,2,3,0,0,5,3,5,6,1]},
-  {n:'Jamaïque', r:'Amériques', v:[7,6,9,3,8,6,4,6,5,6,7,4,6,6,5,3]},
-  {n:'Haïti', r:'Amériques', v:[4,2,7,1,3,6,1,5,1,5,3,1,6,2,8,1]},
-  {n:'République dominicaine', r:'Amériques', v:[7,6,7,5,9,6,4,7,4,6,6,4,6,7,7,3]},
-  {n:'Bahamas', r:'Amériques', v:[7,7,10,6,8,10,5,6,6,7,7,5,5,7,3,5]},
-  {n:'Barbade', r:'Amériques', v:[8,6,10,7,8,4,6,6,7,5,7,6,6,7,4,5]},
-  {n:'Trinité-et-Tobago', r:'Amériques', v:[7,5,10,4,7,6,5,6,4,5,6,4,6,6,6,2]},
-  {n:'Colombie', r:'Amériques', v:[7,6,5,4,9,4,5,8,4,5,6,6,7,7,8,4]},
-  {n:'Venezuela', r:'Amériques', v:[3,1,2,2,5,5,3,4,1,1,1,2,4,3,6,1]},
-  {n:'Équateur', r:'Amériques', v:[6,5,3,4,7,5,4,7,3,5,6,5,7,6,7,3]},
-  {n:'Pérou', r:'Amériques', v:[7,6,10,5,8,5,5,8,3,6,6,5,8,6,8,4]},
-  {n:'Bolivie', r:'Amériques', v:[5,3,8,5,6,6,4,6,3,3,5,3,6,5,8,3]},
-  {n:'Chili', r:'Amériques', v:[8,8,3,6,8,4,6,9,7,6,7,6,7,7,6,5]},
-  {n:'Argentine', r:'Amériques', v:[8,4,8,6,9,5,5,7,4,3,7,6,8,7,6,3]},
-  {n:'Uruguay', r:'Amériques', v:[9,7,10,6,8,7,6,6,8,5,9,7,7,7,5,5]},
-  {n:'Paraguay', r:'Amériques', v:[7,6,10,5,6,10,4,6,3,7,5,4,6,6,8,3]},
-  {n:'Brésil', r:'Amériques', v:[6,5,5,3,9,4,5,8,4,3,6,5,7,6,7,4]},
-  {n:'Guyana', r:'Amériques', v:[7,5,10,5,5,6,4,5,4,5,6,4,6,5,8,2]},
-  {n:'Suriname', r:'Amériques', v:[7,4,8,6,5,5,4,5,4,4,6,4,6,6,8,2]},
-  {n:'Australie', r:'Océanie', v:[9,8,10,9,9,3,8,8,9,5,8,9,8,8,3,7]},
-  {n:'Nouvelle-Zélande', r:'Océanie', v:[9,9,10,9,8,5,8,8,10,5,8,8,8,9,3,6]},
-  {n:'Fidji', r:'Océanie', v:[6,5,10,6,8,6,4,6,5,5,5,4,6,7,7,3]},
-  {n:'Papouasie-Nouvelle-Guinée', r:'Océanie', v:[6,4,9,3,4,5,2,5,3,6,5,2,6,4,8,1]},
-  {n:'Vanuatu', r:'Océanie', v:[8,5,10,7,7,10,3,5,5,6,6,3,6,8,6,2]},
-  {n:'Samoa', r:'Océanie', v:[7,5,10,7,6,6,4,5,6,5,6,4,6,7,7,2]}
+  {n:'France', r:'Europe', v:[8,6,1,6,9,2,7,5,7,1,6,8,10,7,4,6,5,5,10,10,10]},
+  {n:'Belgique', r:'Europe', v:[8,6,1,6,7,2,7,5,7,2,6,8,8,7,4,7,4,3,10,10,10]},
+  {n:'Luxembourg', r:'Europe', v:[9,8,9,9,7,4,7,6,9,4,7,9,8,8,2,9,4,2,10,10,10]},
+  {n:'Pays-Bas', r:'Europe', v:[9,8,4,8,7,2,8,8,9,4,7,9,7,9,3,7,4,2,10,7,10]},
+  {n:'Allemagne', r:'Europe', v:[8,7,4,7,6,3,7,5,8,3,7,8,7,8,4,7,4,3,10,5,10]},
+  {n:'Autriche', r:'Europe', v:[8,7,10,9,7,1,7,5,8,2,7,9,8,8,4,7,4,4,10,5,10]},
+  {n:'Suisse', r:'Europe', v:[9,8,8,10,7,6,9,7,10,7,10,10,8,9,1,9,4,2,9,9,10]},
+  {n:'Liechtenstein', r:'Europe', v:[8,8,10,10,6,8,8,7,9,7,9,9,8,9,1,9,4,2,3,5,10]},
+  {n:'Monaco', r:'Europe', v:[7,8,10,10,8,2,8,6,7,6,4,9,9,8,1,6,7,0,7,10,10]},
+  {n:'Andorre', r:'Europe', v:[8,7,10,10,7,9,7,6,7,7,7,8,8,8,4,6,4,2,6,7,10]},
+  {n:'Saint-Marin', r:'Europe', v:[8,6,8,9,6,6,7,5,6,5,7,8,9,8,4,6,6,3,6,7,10]},
+  {n:'Italie', r:'Europe', v:[8,5,7,6,9,3,6,5,6,2,8,8,10,7,5,5,7,6,10,7,10]},
+  {n:'Espagne', r:'Europe', v:[8,6,6,7,10,3,6,5,7,4,7,8,9,8,6,5,7,6,10,7,10]},
+  {n:'Portugal', r:'Europe', v:[9,6,9,9,9,3,7,6,7,4,7,7,9,8,6,3,7,7,10,7,10]},
+  {n:'Malte', r:'Europe', v:[8,7,8,8,8,5,6,6,6,5,7,7,7,7,5,5,8,1,10,7,10]},
+  {n:'Chypre', r:'Europe', v:[8,7,10,8,8,5,6,6,6,5,7,7,8,7,5,5,8,4,10,7,8]},
+  {n:'Grèce', r:'Europe', v:[8,5,6,7,9,4,6,5,5,3,7,6,9,7,6,3,7,6,10,5,9]},
+  {n:'Royaume-Uni', r:'Europe', v:[8,8,3,6,6,3,8,8,8,4,7,6,6,7,3,5,4,3,4,7,10]},
+  {n:'Irlande', r:'Europe', v:[9,8,3,9,7,3,8,8,9,7,8,7,7,7,3,6,4,5,10,7,10]},
+  {n:'Islande', r:'Europe', v:[9,7,5,10,6,4,7,7,9,4,8,8,7,9,2,7,1,4,10,7,8]},
+  {n:'Norvège', r:'Europe', v:[9,7,10,9,6,3,7,6,10,3,8,9,7,9,2,8,2,5,10,7,9]},
+  {n:'Suède', r:'Europe', v:[9,8,10,7,6,2,7,8,9,3,8,8,7,8,4,7,2,7,10,7,9]},
+  {n:'Danemark', r:'Europe', v:[9,9,4,9,7,2,8,8,10,2,8,8,7,9,3,8,3,4,10,7,10]},
+  {n:'Finlande', r:'Europe', v:[9,8,3,9,6,2,9,6,10,2,8,8,7,9,4,7,1,6,10,7,9]},
+  {n:'Estonie', r:'Europe', v:[9,9,10,8,5,7,10,9,9,6,7,7,6,7,5,6,2,7,10,6,9]},
+  {n:'Lettonie', r:'Europe', v:[8,7,10,7,5,6,7,7,7,5,7,6,6,6,6,5,2,7,10,5,9]},
+  {n:'Lituanie', r:'Europe', v:[8,8,8,7,5,6,7,7,7,5,7,6,6,6,6,5,3,7,10,5,9]},
+  {n:'Pologne', r:'Europe', v:[7,7,9,8,6,6,8,7,7,4,7,6,7,6,7,6,3,6,10,4,9]},
+  {n:'Tchéquie', r:'Europe', v:[8,8,10,9,6,7,7,6,7,5,7,8,6,7,6,6,3,6,10,4,10]},
+  {n:'Slovaquie', r:'Europe', v:[7,6,10,8,5,7,6,5,6,4,6,6,6,6,6,5,3,6,10,4,9]},
+  {n:'Hongrie', r:'Europe', v:[6,7,10,8,6,8,6,5,5,3,5,6,7,6,7,5,4,7,10,3,9]},
+  {n:'Slovénie', r:'Europe', v:[8,6,9,9,6,3,8,6,7,3,7,8,7,8,6,6,4,6,10,5,10]},
+  {n:'Croatie', r:'Europe', v:[7,6,10,8,8,5,6,5,6,4,6,6,8,8,6,5,6,6,10,5,10]},
+  {n:'Serbie', r:'Europe', v:[6,6,9,7,6,8,5,5,4,4,5,5,7,6,8,4,4,7,7,4,9]},
+  {n:'Bosnie-Herzégovine', r:'Europe', v:[6,5,9,6,6,9,4,5,3,4,5,4,6,6,8,2,4,6,6,3,9]},
+  {n:'Monténégro', r:'Europe', v:[7,6,9,7,7,8,5,5,5,4,6,5,6,7,6,3,6,6,7,4,9]},
+  {n:'Macédoine du Nord', r:'Europe', v:[7,6,9,7,6,9,4,5,4,5,6,4,6,6,8,2,5,6,6,3,9]},
+  {n:'Albanie', r:'Europe', v:[7,6,9,7,7,7,4,6,4,6,6,4,6,7,8,2,6,7,9,4,9]},
+  {n:'Kosovo', r:'Europe', v:[7,6,9,7,6,8,4,6,4,5,6,4,6,6,8,2,4,6,6,3,9]},
+  {n:'Roumanie', r:'Europe', v:[7,6,10,7,6,9,5,6,5,5,6,5,7,6,8,5,4,8,10,7,9]},
+  {n:'Bulgarie', r:'Europe', v:[7,7,10,7,7,9,5,6,4,6,6,5,7,6,8,5,5,8,10,3,9]},
+  {n:'Moldavie', r:'Europe', v:[7,5,9,6,5,8,4,5,4,5,6,4,6,6,8,2,4,6,6,7,9]},
+  {n:'Ukraine', r:'Europe', v:[5,4,9,1,5,8,6,6,4,4,5,4,7,3,8,3,3,5,3,3,7]},
+  {n:'Biélorussie', r:'Europe', v:[3,3,8,5,4,8,6,3,2,1,2,4,6,4,6,2,2,3,2,3,7]},
+  {n:'Russie', r:'Europe', v:[3,4,10,3,5,8,6,4,2,2,1,5,6,4,7,4,1,4,2,2,7]},
+  {n:'Géorgie', r:'Europe', v:[8,8,9,7,8,8,5,7,6,7,6,5,8,7,8,3,5,7,9,4,7]},
+  {n:'Arménie', r:'Europe', v:[7,7,10,7,6,8,5,6,5,6,6,5,8,6,8,3,4,6,7,3,7]},
+  {n:'Azerbaïdjan', r:'Europe', v:[4,5,9,6,5,6,4,5,2,3,3,3,6,6,8,1,5,4,4,3,7]},
+  {n:'Turquie', r:'Europe', v:[5,6,7,5,8,4,5,7,3,4,4,6,8,6,8,3,6,5,6,3,8]},
+  {n:'Japon', r:'Asie', v:[8,7,1,10,8,1,9,3,8,5,6,9,10,5,5,6,5,6,4,2,3]},
+  {n:'Corée du Sud', r:'Asie', v:[8,8,1,9,7,3,9,5,7,6,7,9,8,4,5,6,4,4,4,2,3]},
+  {n:'Taïwan', r:'Asie', v:[9,9,6,9,8,4,9,7,8,6,8,9,8,6,6,6,8,3,4,2,3]},
+  {n:'Chine', r:'Asie', v:[2,4,10,7,5,3,8,7,4,1,0,6,5,4,7,5,5,1,2,1,3]},
+  {n:'Hong Kong', r:'Asie', v:[5,9,10,8,7,8,9,7,7,8,2,9,8,5,2,4,9,0,5,6,3]},
+  {n:'Macao', r:'Asie', v:[5,7,10,9,6,8,8,6,6,6,4,7,6,8,6,5,9,0,5,2,3]},
+  {n:'Mongolie', r:'Asie', v:[7,6,9,6,4,8,4,6,4,5,6,4,6,5,8,2,1,5,5,2,3]},
+  {n:'Singapour', r:'Asie', v:[5,10,10,10,7,7,10,8,10,7,4,10,8,6,2,7,10,0,3,7,3]},
+  {n:'Malaisie', r:'Asie', v:[5,7,10,7,7,6,6,6,5,6,5,7,7,6,8,5,10,4,5,6,3]},
+  {n:'Thaïlande', r:'Asie', v:[6,6,8,5,10,5,5,7,4,5,4,7,8,7,8,4,10,3,6,3,3]},
+  {n:'Vietnam', r:'Asie', v:[4,6,8,7,8,5,7,8,4,2,1,6,8,6,9,4,9,2,4,2,3]},
+  {n:'Cambodge', r:'Asie', v:[4,5,9,5,7,7,3,7,2,4,2,4,7,6,8,2,10,3,7,4,3]},
+  {n:'Laos', r:'Asie', v:[3,4,9,6,6,6,3,6,3,2,2,3,6,6,8,1,9,2,5,2,3]},
+  {n:'Birmanie', r:'Asie', v:[2,2,8,1,5,5,2,5,1,2,1,2,6,3,8,1,9,1,5,2,3]},
+  {n:'Philippines', r:'Asie', v:[6,5,6,4,8,5,3,7,3,6,6,5,5,6,8,3,10,3,6,7,3]},
+  {n:'Indonésie', r:'Asie', v:[5,6,9,6,8,4,4,8,4,6,6,5,7,6,9,3,10,3,5,3,3]},
+  {n:'Brunei', r:'Asie', v:[3,6,10,9,4,10,6,4,6,3,2,6,6,6,6,4,10,1,5,2,3]},
+  {n:'Timor oriental', r:'Asie', v:[6,4,9,6,5,6,3,5,4,5,5,4,6,6,8,2,10,3,5,7,3]},
+  {n:'Inde', r:'Asie', v:[5,6,10,5,7,4,5,8,4,5,6,5,5,3,9,3,9,3,3,7,4]},
+  {n:'Pakistan', r:'Asie', v:[3,4,10,3,5,5,3,6,3,4,2,3,6,4,8,1,8,2,5,2,5]},
+  {n:'Bangladesh', r:'Asie', v:[4,4,8,4,4,5,3,6,3,5,3,3,6,4,8,1,9,2,5,2,4]},
+  {n:'Sri Lanka', r:'Asie', v:[6,5,10,6,7,5,5,6,4,5,5,6,6,6,8,2,10,3,5,2,4]},
+  {n:'Népal', r:'Asie', v:[6,4,9,6,6,5,3,6,3,5,5,3,6,6,8,1,5,3,5,2,4]},
+  {n:'Bhoutan', r:'Asie', v:[5,4,9,8,5,5,4,5,7,4,4,6,6,6,8,4,4,2,5,2,4]},
+  {n:'Maldives', r:'Asie', v:[5,5,10,7,8,7,4,6,4,5,4,4,6,8,8,2,10,0,3,7,4]},
+  {n:'Kazakhstan', r:'Asie', v:[5,6,10,6,5,9,6,6,4,4,2,5,6,5,8,4,2,4,5,2,5]},
+  {n:'Ouzbékistan', r:'Asie', v:[4,5,9,7,5,8,5,6,3,3,3,4,6,6,6,2,5,3,5,2,5]},
+  {n:'Kirghizistan', r:'Asie', v:[5,5,9,6,5,9,4,6,3,5,4,4,6,6,8,2,3,4,6,2,5]},
+  {n:'Tadjikistan', r:'Asie', v:[3,3,8,6,4,8,3,5,2,2,2,2,6,5,8,1,4,2,5,2,5]},
+  {n:'Turkménistan', r:'Asie', v:[1,2,8,6,3,8,3,2,1,1,0,2,6,4,8,1,6,1,5,2,5]},
+  {n:'Afghanistan', r:'Asie', v:[0,1,8,0,1,6,1,4,1,1,0,1,6,0,8,1,5,1,5,2,5]},
+  {n:'Corée du Nord', r:'Asie', v:[0,0,5,4,1,5,3,0,0,0,0,2,6,2,8,1,3,0,5,2,3]},
+  {n:'Émirats arabes unis', r:'Moyen-Orient', v:[4,9,10,10,7,10,7,9,8,5,1,8,7,6,4,8,9,1,8,7,6]},
+  {n:'Qatar', r:'Moyen-Orient', v:[4,8,10,10,6,10,7,7,7,4,1,8,6,6,4,9,9,0,4,6,6]},
+  {n:'Bahreïn', r:'Moyen-Orient', v:[4,8,10,8,6,10,6,7,5,4,1,7,6,6,5,7,9,1,6,6,6]},
+  {n:'Koweït', r:'Moyen-Orient', v:[4,6,10,8,5,10,5,5,5,3,3,7,5,5,5,8,9,1,3,5,6]},
+  {n:'Oman', r:'Moyen-Orient', v:[4,7,10,9,6,10,5,6,6,4,2,7,6,6,5,7,9,1,5,5,6]},
+  {n:'Arabie saoudite', r:'Moyen-Orient', v:[2,7,10,8,5,10,5,7,5,2,0,7,5,5,5,7,9,1,3,4,6]},
+  {n:'Israël', r:'Moyen-Orient', v:[7,7,10,5,8,2,7,10,7,4,7,8,8,6,2,5,8,2,3,6,7]},
+  {n:'Jordanie', r:'Moyen-Orient', v:[5,6,10,7,6,6,5,6,5,5,3,6,7,5,6,3,8,2,5,5,7]},
+  {n:'Liban', r:'Moyen-Orient', v:[6,4,6,4,8,5,5,7,2,5,4,5,8,5,6,2,7,3,5,7,7]},
+  {n:'Iran', r:'Moyen-Orient', v:[1,2,7,5,4,5,5,5,2,1,0,4,6,4,6,2,7,2,2,2,6]},
+  {n:'Irak', r:'Moyen-Orient', v:[3,3,8,2,4,7,3,5,2,3,2,2,6,3,8,1,8,1,5,2,6]},
+  {n:'Syrie', r:'Moyen-Orient', v:[1,1,6,0,2,7,2,4,1,1,0,2,6,1,8,1,7,1,5,2,7]},
+  {n:'Yémen', r:'Moyen-Orient', v:[1,1,8,0,1,6,1,4,1,2,0,1,6,0,8,1,9,1,5,2,5]},
+  {n:'Égypte', r:'Afrique', v:[3,4,10,6,6,5,4,6,3,3,1,4,6,4,9,2,9,2,6,4,7]},
+  {n:'Maroc', r:'Afrique', v:[5,6,10,7,8,4,4,6,5,4,3,5,7,6,8,3,7,4,8,8,9]},
+  {n:'Algérie', r:'Afrique', v:[3,3,7,6,5,4,4,4,3,2,2,4,6,6,8,2,8,2,3,8,9]},
+  {n:'Tunisie', r:'Afrique', v:[5,5,8,6,7,4,5,5,4,3,4,5,7,6,8,3,7,3,7,8,9]},
+  {n:'Libye', r:'Afrique', v:[2,2,8,1,3,8,3,4,1,3,1,2,6,2,8,1,8,1,5,3,8]},
+  {n:'Mauritanie', r:'Afrique', v:[3,4,8,5,3,6,2,5,3,5,2,2,6,4,8,1,9,2,5,7,6]},
+  {n:'Sénégal', r:'Afrique', v:[6,5,8,6,7,5,3,7,5,5,6,4,6,6,7,2,9,3,7,9,6]},
+  {n:"Côte d'Ivoire", r:'Afrique', v:[5,5,7,5,6,5,3,7,4,5,4,4,6,6,8,2,10,3,5,9,6]},
+  {n:'Ghana', r:'Afrique', v:[7,5,9,7,6,5,4,7,5,5,6,4,6,6,7,2,10,3,5,7,5]},
+  {n:'Nigeria', r:'Afrique', v:[4,4,9,2,4,6,3,8,3,5,3,3,6,3,8,1,10,2,5,7,5]},
+  {n:'Bénin', r:'Afrique', v:[6,5,8,6,5,5,3,6,5,5,5,4,6,6,8,2,10,3,5,9,5]},
+  {n:'Togo', r:'Afrique', v:[5,5,8,6,5,5,3,6,3,4,4,3,6,6,8,1,10,3,5,9,5]},
+  {n:'Burkina Faso', r:'Afrique', v:[4,4,8,1,3,6,2,6,3,4,3,2,6,2,8,1,9,3,5,9,6]},
+  {n:'Mali', r:'Afrique', v:[3,4,8,1,3,6,2,6,2,4,2,2,6,2,8,1,9,2,5,9,6]},
+  {n:'Niger', r:'Afrique', v:[3,3,8,2,2,6,1,5,3,4,2,2,6,2,8,1,9,2,5,9,6]},
+  {n:'Cap-Vert', r:'Afrique', v:[8,6,9,7,7,6,5,6,7,5,7,4,6,7,7,3,8,4,7,7,6]},
+  {n:'Gambie', r:'Afrique', v:[6,5,8,6,5,6,3,6,4,5,5,4,6,6,8,2,9,3,5,7,6]},
+  {n:'Guinée', r:'Afrique', v:[4,4,8,4,3,6,2,6,2,4,3,2,6,4,8,1,10,2,5,9,6]},
+  {n:'Guinée-Bissau', r:'Afrique', v:[5,3,8,5,4,6,2,5,2,5,4,2,6,4,8,1,10,2,5,7,5]},
+  {n:'Sierra Leone', r:'Afrique', v:[6,4,8,6,4,6,2,6,3,5,5,2,6,5,8,1,10,2,5,3,5]},
+  {n:'Libéria', r:'Afrique', v:[6,4,8,5,4,6,2,6,3,5,5,2,6,4,8,1,10,2,5,7,5]},
+  {n:'Cameroun', r:'Afrique', v:[3,4,6,3,4,5,3,6,2,4,2,2,6,4,8,1,10,3,5,8,5]},
+  {n:'Gabon', r:'Afrique', v:[5,5,8,6,5,5,4,5,3,4,4,4,6,6,8,2,10,3,5,9,5]},
+  {n:'Guinée équatoriale', r:'Afrique', v:[2,3,8,6,3,6,3,4,1,2,1,2,6,4,8,1,10,1,5,6,5]},
+  {n:'São Tomé-et-Principe', r:'Afrique', v:[7,4,8,7,5,6,4,5,5,5,6,4,6,6,8,2,10,4,5,7,5]},
+  {n:'Congo', r:'Afrique', v:[4,3,7,4,4,4,3,5,2,3,3,2,6,4,8,1,10,2,5,9,5]},
+  {n:'RD Congo', r:'Afrique', v:[3,2,7,1,3,5,2,6,1,4,2,2,6,2,8,1,10,2,5,9,5]},
+  {n:'Tchad', r:'Afrique', v:[2,2,8,2,2,5,1,5,2,4,1,2,6,2,8,1,9,2,5,8,5]},
+  {n:'Centrafrique', r:'Afrique', v:[2,1,8,0,2,5,1,4,1,4,1,1,6,1,8,1,10,1,5,9,5]},
+  {n:'Soudan', r:'Afrique', v:[1,1,8,0,1,6,2,5,1,2,0,2,6,0,8,1,9,1,5,3,5]},
+  {n:'Soudan du Sud', r:'Afrique', v:[1,1,8,0,1,6,1,4,1,4,0,1,6,0,8,1,10,1,5,7,5]},
+  {n:'Éthiopie', r:'Afrique', v:[3,3,9,2,4,6,3,6,3,2,2,3,6,3,8,1,6,2,5,3,5]},
+  {n:'Érythrée', r:'Afrique', v:[1,1,8,4,2,6,2,2,1,0,0,2,6,3,8,1,8,0,5,3,5]},
+  {n:'Djibouti', r:'Afrique', v:[4,4,8,6,4,5,3,5,3,3,3,3,6,5,8,1,9,1,5,8,5]},
+  {n:'Somalie', r:'Afrique', v:[1,1,8,0,1,7,1,6,1,6,0,1,6,0,8,1,9,1,5,3,5]},
+  {n:'Kenya', r:'Afrique', v:[6,6,10,5,7,5,5,8,4,6,5,4,6,6,7,3,7,4,5,7,5]},
+  {n:'Ouganda', r:'Afrique', v:[4,5,9,5,5,5,4,8,3,5,3,4,6,5,8,2,8,3,5,7,5]},
+  {n:'Tanzanie', r:'Afrique', v:[5,5,9,6,7,5,3,6,4,5,4,4,6,6,8,2,9,3,5,7,5]},
+  {n:'Rwanda', r:'Afrique', v:[4,7,9,8,5,5,4,8,6,4,2,5,5,7,7,2,6,3,6,6,5]},
+  {n:'Burundi', r:'Afrique', v:[2,2,8,4,3,5,2,5,2,3,1,2,6,4,8,1,7,2,5,8,5]},
+  {n:'Mozambique', r:'Afrique', v:[5,4,7,3,6,5,2,5,3,5,4,2,6,4,8,1,9,3,5,7,3]},
+  {n:'Madagascar', r:'Afrique', v:[5,4,7,5,6,6,3,5,3,5,4,3,6,6,8,1,8,3,5,8,3]},
+  {n:'Maurice', r:'Afrique', v:[8,8,10,8,8,7,6,6,7,6,7,6,7,7,7,5,9,3,7,9,3]},
+  {n:'Seychelles', r:'Afrique', v:[7,6,10,8,8,6,6,5,7,5,6,6,7,8,5,5,10,2,5,8,4]},
+  {n:'Comores', r:'Afrique', v:[5,3,8,6,5,5,3,5,3,5,4,3,6,6,8,1,10,2,5,8,3]},
+  {n:'Afrique du Sud', r:'Afrique', v:[7,6,3,2,7,3,5,6,5,4,7,5,7,5,7,4,6,5,4,7,3]},
+  {n:'Namibie', r:'Afrique', v:[8,6,9,5,7,4,4,6,6,4,7,4,6,7,7,3,7,5,5,7,3]},
+  {n:'Botswana', r:'Afrique', v:[7,7,7,6,6,6,5,6,7,5,6,5,6,7,7,4,7,4,5,7,3]},
+  {n:'Zimbabwe', r:'Afrique', v:[3,2,7,5,4,4,4,6,2,2,2,3,6,4,8,1,7,3,5,7,3]},
+  {n:'Zambie', r:'Afrique', v:[6,5,9,6,5,5,3,6,4,5,5,4,6,6,8,2,8,4,5,7,4]},
+  {n:'Malawi', r:'Afrique', v:[6,4,8,6,4,5,2,6,4,5,5,3,6,5,8,1,8,3,5,7,4]},
+  {n:'Angola', r:'Afrique', v:[4,3,8,5,5,5,3,6,3,3,3,3,6,5,8,1,9,2,5,7,4]},
+  {n:'Eswatini', r:'Afrique', v:[3,4,8,5,4,5,3,5,3,3,2,3,6,4,8,1,6,3,5,7,3]},
+  {n:'Lesotho', r:'Afrique', v:[6,4,8,5,4,5,3,5,4,4,5,4,6,4,8,2,4,3,5,7,3]},
+  {n:'Canada', r:'Amériques', v:[9,8,7,9,7,3,9,8,9,4,7,7,7,8,4,6,2,7,4,9,6]},
+  {n:'États-Unis', r:'Amériques', v:[8,8,9,5,8,5,8,10,7,6,8,6,5,5,3,8,5,8,2,7,5]},
+  {n:'Mexique', r:'Amériques', v:[6,6,10,3,9,5,5,7,3,6,6,5,7,6,7,4,8,6,7,7,4]},
+  {n:'Guatemala', r:'Amériques', v:[5,5,6,4,6,8,3,7,3,6,4,3,6,5,8,1,8,5,5,7,3]},
+  {n:'Belize', r:'Amériques', v:[7,5,10,5,7,6,4,6,4,6,6,4,6,6,8,2,10,8,7,7,3]},
+  {n:'Honduras', r:'Amériques', v:[5,5,8,3,6,6,3,6,2,6,4,2,6,4,8,1,10,5,5,7,3]},
+  {n:'Salvador', r:'Amériques', v:[4,6,10,6,6,6,3,6,3,4,3,3,6,6,8,1,10,4,5,7,3]},
+  {n:'Nicaragua', r:'Amériques', v:[2,3,9,5,5,6,3,4,1,2,1,4,6,6,8,2,10,5,4,7,3]},
+  {n:'Costa Rica', r:'Amériques', v:[9,6,10,6,9,8,6,7,6,5,7,7,7,9,5,4,9,7,7,7,4]},
+  {n:'Panama', r:'Amériques', v:[8,7,10,6,8,8,5,7,4,7,6,6,6,7,6,5,10,7,8,7,4]},
+  {n:'Cuba', r:'Amériques', v:[1,1,5,6,6,4,5,2,3,0,0,5,3,5,6,1,10,1,2,7,4]},
+  {n:'Jamaïque', r:'Amériques', v:[7,6,9,3,8,6,4,6,5,6,7,4,6,6,5,3,10,4,5,7,4]},
+  {n:'Haïti', r:'Amériques', v:[4,2,7,1,3,6,1,5,1,5,3,1,6,2,8,1,10,2,3,9,4]},
+  {n:'République dominicaine', r:'Amériques', v:[7,6,7,5,9,6,4,7,4,6,6,4,6,7,7,3,10,5,7,7,4]},
+  {n:'Bahamas', r:'Amériques', v:[7,7,10,6,8,10,5,6,6,7,7,5,5,7,3,5,9,3,5,7,4]},
+  {n:'Barbade', r:'Amériques', v:[8,6,10,7,8,4,6,6,7,5,7,6,6,7,4,5,10,3,5,7,4]},
+  {n:'Trinité-et-Tobago', r:'Amériques', v:[7,5,10,4,7,6,5,6,4,5,6,4,6,6,6,2,10,4,5,7,4]},
+  {n:'Colombie', r:'Amériques', v:[7,6,5,4,9,4,5,8,4,5,6,6,7,7,8,4,9,6,6,7,4]},
+  {n:'Venezuela', r:'Amériques', v:[3,1,2,2,5,5,3,4,1,1,1,2,4,3,6,1,9,3,2,7,4]},
+  {n:'Équateur', r:'Amériques', v:[6,5,3,4,7,5,4,7,3,5,6,5,7,6,7,3,8,7,7,7,3]},
+  {n:'Pérou', r:'Amériques', v:[7,6,10,5,8,5,5,8,3,6,6,5,8,6,8,4,7,6,6,7,3]},
+  {n:'Bolivie', r:'Amériques', v:[5,3,8,5,6,6,4,6,3,3,5,3,6,5,8,3,6,6,6,7,3]},
+  {n:'Chili', r:'Amériques', v:[8,8,3,6,8,4,6,9,7,6,7,6,7,7,6,5,6,6,6,7,3]},
+  {n:'Argentine', r:'Amériques', v:[8,4,8,6,9,5,5,7,4,3,7,6,8,7,6,3,6,7,7,7,3]},
+  {n:'Uruguay', r:'Amériques', v:[9,7,10,6,8,7,6,6,8,5,9,7,7,7,5,5,6,7,8,7,3]},
+  {n:'Paraguay', r:'Amériques', v:[7,6,10,5,6,10,4,6,3,7,5,4,6,6,8,3,9,9,9,7,3]},
+  {n:'Brésil', r:'Amériques', v:[6,5,5,3,9,4,5,8,4,3,6,5,7,6,7,4,9,6,5,7,3]},
+  {n:'Guyana', r:'Amériques', v:[7,5,10,5,5,6,4,5,4,5,6,4,6,5,8,2,10,5,5,7,4]},
+  {n:'Suriname', r:'Amériques', v:[7,4,8,6,5,5,4,5,4,4,6,4,6,6,8,2,10,4,5,3,4]},
+  {n:'Australie', r:'Océanie', v:[9,8,10,9,9,3,8,8,9,5,8,9,8,8,3,7,8,7,3,7,1]},
+  {n:'Nouvelle-Zélande', r:'Océanie', v:[9,9,10,9,8,5,8,8,10,5,8,8,8,9,3,6,5,7,3,7,1]},
+  {n:'Fidji', r:'Océanie', v:[6,5,10,6,8,6,4,6,5,5,5,4,6,7,7,3,10,5,5,7,1]},
+  {n:'Papouasie-Nouvelle-Guinée', r:'Océanie', v:[6,4,9,3,4,5,2,5,3,6,5,2,6,4,8,1,10,3,5,7,2]},
+  {n:'Vanuatu', r:'Océanie', v:[8,5,10,7,7,10,3,5,5,6,6,3,6,8,6,2,10,6,6,8,1]},
+  {n:'Samoa', r:'Océanie', v:[7,5,10,7,6,6,4,5,6,5,6,4,6,7,7,2,10,4,5,7,1]}
 ];
 
 
@@ -573,7 +626,7 @@ applyTheme(document.documentElement.dataset.theme || 'auto');
 /* ====== État ====== */
 const app = document.getElementById('app');
 let current = store.last && store.profiles[store.last] ? store.last : null;
-let view = current ? 'result' : 'home';
+let view = store.draft ? 'home' : (current ? 'result' : 'home');
 let qi = 0, draft = [], selected = 0, region = 'Tous', draftName = '';
 
 const esc = t => String(t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -583,7 +636,7 @@ const fmtDate = iso => { try{ return new Date(iso).toLocaleDateString('fr-FR',{d
 function needs(answers){
   return AXES.map(a=>{
     let sr=0, sw=0, n=0;
-    QUESTIONS.forEach((q,i)=>{ if(q.axis!==a.id) return; const x=answers[i]; if(x==null) return;
+    QUESTIONS.forEach((q,i)=>{ if(q.axis!==a.id || !ACTIVE.has(i) || !visible(i, answers)) return; const x=answers[i]; if(x==null) return;
       const o=q.opts[x]; n++; sw+=o.w; sr+=o.req*o.w; });
     if(!n) return null;
     return { req: sw ? Math.round(sr/sw*10)/10 : 0, w: sw/n };
@@ -606,7 +659,7 @@ function ranked(answers, reg){
 }
 
 /* ====== Hexagone ====== */
-function pt(i, val, R=110, cx=170, cy=160){ const ang=-Math.PI/2+i*Math.PI*2/FAMILIES.length, r=R*val/10; return [cx+r*Math.cos(ang), cy+r*Math.sin(ang)]; }
+function pt(i, val, R=125, cx=170, cy=178){ const ang=-Math.PI/2+i*Math.PI*2/FAMILIES.length, r=R*val/10; return [cx+r*Math.cos(ang), cy+r*Math.sin(ang)]; }
 function poly(vals){ return vals.map((v,i)=>pt(i,v).join(',')).join(' '); }
 const axIdx = id => AXES.findIndex(a=>a.id===id);
 function famVals(c, nd){
@@ -621,14 +674,14 @@ function hexSVG(c, nd){
   const fv = famVals(c, nd), L = FAMILIES.length;
   let g='';
   [2.5,5,7.5,10].forEach(l=> g+=`<polygon points="${poly(Array(L).fill(l))}" fill="none" stroke="var(--line)"/>`);
-  FAMILIES.forEach((f,i)=>{ const [x,y]=pt(i,10); g+=`<line x1="170" y1="160" x2="${x}" y2="${y}" stroke="var(--line)"/>`; });
+  FAMILIES.forEach((f,i)=>{ const [x,y]=pt(i,10); g+=`<line x1="170" y1="178" x2="${x}" y2="${y}" stroke="var(--line)"/>`; });
   g+=`<polygon points="${poly(fv.map(f=>f.req))}" fill="none" stroke="var(--want)" stroke-width="2.5" stroke-dasharray="6 5"/>`;
   g+=`<polygon points="${poly(fv.map(f=>f.v))}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5"/>`;
   fv.forEach((f,i)=>{ const [x,y]=pt(i,f.v); g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${f.known&&f.v<f.req-0.5?'var(--bad)':'var(--accent)'}"/>`; });
-  FAMILIES.forEach((f,i)=>{ const [x,y]=pt(i,10,138); const an=Math.abs(x-170)<5?'middle':(x>170?'start':'end');
+  FAMILIES.forEach((f,i)=>{ const [x,y]=pt(i,10,152); const an=Math.abs(x-170)<5?'middle':(x>170?'start':'end');
     g+=`<text x="${x}" y="${y+4}" text-anchor="${an}" font-size="15" font-weight="600" fill="${fv[i].known?'var(--ink)':'var(--muted)'}">${f.short}${fv[i].known?'':' (?)'}</text>`;
     g+=`<text x="${x}" y="${y+21}" text-anchor="${an}" font-size="13" fill="var(--muted)">${num(Math.round(fv[i].v*10)/10)}/10</text>`; });
-  return `<svg class="hex" viewBox="-95 0 530 335" role="img" aria-label="Hexagone de correspondance ${esc(c.n)}">${g}</svg>`;
+  return `<svg class="hex" viewBox="-112 -6 564 372" role="img" aria-label="Graphique radar de correspondance ${esc(c.n)}">${g}</svg>`;
 }
 function barsHTML(c, nd){
   return FAMILIES.map(f=>`<div class="fam"><h4>${f.label}</h4>${f.axes.map(id=>{
@@ -642,7 +695,7 @@ function barsHTML(c, nd){
 const EXTRAPOLATED = new Set(["Bosnie-Herzégovine", "Monténégro", "Macédoine du Nord", "Albanie", "Kosovo", "Moldavie", "Biélorussie", "Azerbaïdjan", "Macao", "Mongolie", "Laos", "Birmanie", "Brunei", "Timor oriental", "Pakistan", "Bangladesh", "Népal", "Bhoutan", "Maldives", "Ouzbékistan", "Kirghizistan", "Tadjikistan", "Turkménistan", "Afghanistan", "Corée du Nord", "Iran", "Irak", "Syrie", "Yémen", "Algérie", "Libye", "Mauritanie", "Côte d'Ivoire", "Nigeria", "Bénin", "Togo", "Burkina Faso", "Mali", "Niger", "Gambie", "Guinée", "Guinée-Bissau", "Sierra Leone", "Libéria", "Cameroun", "Gabon", "Guinée équatoriale", "São Tomé-et-Principe", "Congo", "RD Congo", "Tchad", "Centrafrique", "Soudan", "Soudan du Sud", "Éthiopie", "Érythrée", "Djibouti", "Somalie", "Ouganda", "Tanzanie", "Burundi", "Mozambique", "Madagascar", "Comores", "Zimbabwe", "Zambie", "Malawi", "Angola", "Eswatini", "Lesotho", "Guatemala", "Belize", "Honduras", "Salvador", "Haïti", "Trinité-et-Tobago", "Guyana", "Suriname", "Papouasie-Nouvelle-Guinée"]);
 
 /* ====== Fiches pays ====== */
-const NOTES = {"Estonie": [["ent", "Création d’entreprise en ligne en quelques heures, e-résidence ouverte aux étrangers."], ["fis", "Impôt sur le revenu à taux unique ; les bénéfices d’une société ne sont taxés que lorsqu’ils sont distribués."], ["suc", "Aucun droit de succession."], ["edu", "Parmi les meilleurs résultats PISA d’Europe."], ["cul", "Berceau de Skype et de nombreuses startups, entrepreneuriat très valorisé."], ["viv", "Hivers longs, froids et sombres."], ["sec", "Très sûr au quotidien, mais pays frontalier de la Russie."], ["gov", "Administration presque entièrement numérique."]], "Nouvelle-Zélande": [["lib", "Régulièrement dans le haut des classements de liberté personnelle."], ["suc", "Aucun droit de succession."], ["fis", "Taux marginal de 39 %, pas d’impôt général sur les plus-values."], ["ent", "Création d’entreprise parmi les plus simples au monde."], ["gen", "Très loin de la France, visas de résidence sélectifs."], ["gov", "Régulièrement en tête des classements anticorruption."]], "Suisse": [["suc", "Fixés par les cantons ; les enfants sont exonérés dans la plupart d’entre eux."], ["fis", "Très variable selon le canton et la commune ; Zoug ou Schwyz parmi les plus légers."], ["sec", "L’un des pays les plus sûrs au monde."], ["edu", "Écoles et universités de très haut niveau (EPFZ, EPFL)."], ["viv", "Coût de la vie parmi les plus élevés au monde."], ["eta", "Démocratie directe : les citoyens votent plusieurs fois par an par référendum."]], "Australie": [["suc", "Pas de droits de succession."], ["fis", "Taux marginal de 45 %, plus un prélèvement santé."], ["viv", "Climat et vie en plein air."], ["lib", "Réglementation stricte sur certains sujets (armes, amendes routières)."], ["gen", "Visas de résidence sélectifs, très loin de la France."]], "Singapour": [["lib", "Règles très strictes et amendes élevées pour les petites infractions ; liberté d’expression encadrée."], ["fis", "Taux marginal de 24 %, pas d’impôt sur les plus-values."], ["suc", "Droits de succession abolis en 2008."], ["sec", "L’un des pays les plus sûrs au monde."], ["edu", "Niveau scolaire parmi les meilleurs au monde."], ["viv", "Chaleur humide toute l’année, coût du logement très élevé."], ["gov", "Parmi les pays les moins corrompus au monde."], ["eta", "Dépense publique faible, mais État très présent et directif."]], "Émirats arabes unis": [["fis", "Pas d’impôt sur le revenu des particuliers."], ["lib", "Liberté d’expression limitée et lois sur les mœurs."], ["sec", "Criminalité très faible."], ["suc", "Pas de droits de succession ; faire enregistrer un testament évite l’application des règles successorales religieuses."]], "Monaco": [["fis", "Pas d’impôt sur le revenu pour les résidents, sauf pour les Français : en vertu de la convention de 1963, ils restent imposés en France."], ["suc", "Exonération en ligne directe."], ["sec", "Surveillance et sécurité maximales."], ["viv", "Logement extrêmement cher."]], "Andorre": [["fis", "Impôt sur le revenu plafonné à 10 %."], ["suc", "Pas de droits de succession."], ["gen", "Résidence accessible avec un investissement ou une activité sur place."]], "Liechtenstein": [["fis", "Fiscalité légère."], ["suc", "Pas de droits de succession."], ["gen", "Titre de séjour très difficile à obtenir (quotas)."]], "Portugal": [["suc", "Pas de droits de succession ; droit de timbre de 10 % dont conjoint et enfants sont exemptés."], ["fis", "Taux marginal de 48 % ; l’ancien régime des résidents non habituels a été remplacé en 2024 par un dispositif plus restreint."], ["viv", "Climat, cuisine et proximité culturelle avec la France."], ["sec", "Parmi les pays les plus sûrs d’Europe."]], "Espagne": [["suc", "Très variable selon la région ; quasi nul pour les enfants dans plusieurs régions (Madrid, Andalousie)."], ["fis", "Taux marginal autour de 47 % selon la région."], ["viv", "Climat, vie sociale et gastronomie de premier plan."]], "Géorgie": [["fis", "Taux unique de 20 % ; le statut de petite entreprise est imposé à 1 % du chiffre d’affaires."], ["ent", "Démarches administratives très simples."], ["sec", "Tensions avec la Russie et instabilité politique récente."], ["gov", "Réformes anticorruption réussies dans les années 2000, mais inquiétudes récentes sur l’État de droit."]], "Uruguay": [["fis", "Fiscalité territoriale, avec des exonérations temporaires pour les nouveaux résidents."], ["suc", "Pas de droits de succession."], ["sec", "Plus sûr que la moyenne sud-américaine, mais criminalité en hausse."], ["lib", "Démocratie stable et libérale."]], "Panama": [["fis", "Fiscalité territoriale : les revenus de source étrangère ne sont pas imposés."], ["suc", "Pas de droits de succession."], ["gen", "Programmes de résidence accessibles aux étrangers."]], "Costa Rica": [["fis", "Fiscalité territoriale."], ["lib", "Démocratie stable, pays sans armée."], ["sec", "Criminalité en nette hausse ces dernières années."], ["viv", "Nature et climat exceptionnels."]], "Paraguay": [["fis", "Impôt sur le revenu à 10 % et fiscalité territoriale."], ["gen", "Résidence facile à obtenir, mais infrastructures limitées."]], "Canada": [["suc", "Pas de droits de succession, mais les plus-values latentes sont imposées au décès."], ["fis", "Taux marginal combiné autour de 50 % selon la province."], ["edu", "Système scolaire de très bon niveau."], ["viv", "Hivers rudes."], ["gen", "Le Québec facilite l’intégration des francophones."]], "États-Unis": [["suc", "Abattement fédéral de 15 millions de dollars par personne depuis 2026 ; une minorité d’États a son propre impôt."], ["sec", "Taux d’homicides environ cinq fois celui de l’Europe de l’Ouest, très variable selon les États."], ["cul", "La culture entrepreneuriale la plus forte au monde : l’échec y est vu comme une expérience."], ["fis", "Taux fédéral maximal de 37 %, plus l’impôt de l’État (nul au Texas ou en Floride)."], ["gen", "Visa difficile à obtenir pour s’installer durablement."], ["eta", "État fédéral plus léger qu’en Europe, avec de fortes différences d’un État à l’autre."]], "Japon": [["suc", "Droits de succession parmi les plus élevés au monde (jusqu’à 55 %)."], ["fis", "Taux marginal d’environ 55 % avec l’impôt local."], ["sec", "L’un des pays les plus sûrs au monde."], ["cul", "L’échec entrepreneurial reste mal vu socialement."], ["lib", "Libertés légales larges, mais forte pression sociale au conformisme."]], "Thaïlande": [["viv", "Climat, cuisine et coût de la vie très attractifs."], ["suc", "Droits de succession uniquement au-delà de 100 millions de bahts."], ["lib", "Le crime de lèse-majesté est sévèrement puni."], ["ent", "Un étranger ne peut en principe ni détenir la majorité d’une entreprise ni posséder de terrain."], ["fis", "Les revenus étrangers rapatriés sont imposables depuis 2024."], ["gov", "Coups d’État à répétition, le dernier en 2014."]], "Vietnam": [["lib", "Régime à parti unique, liberté d’expression limitée."], ["cul", "Forte dynamique entrepreneuriale."], ["ent", "Restrictions sur la propriété étrangère."]], "Malaisie": [["suc", "Pas de droits de succession."], ["fis", "Les revenus de source étrangère des particuliers sont largement exonérés."], ["lib", "Lois restrictives sur certains sujets moraux et religieux."], ["gen", "Programme de visa long séjour (MM2H)."]], "Hong Kong": [["fis", "Taux maximal de 15 à 17 %, pas d’impôt sur les plus-values."], ["suc", "Droits de succession abolis en 2006."], ["lib", "Libertés civiles fortement réduites depuis la loi sur la sécurité nationale de 2020."], ["eta", "Dépense publique faible et économie très ouverte."]], "Taïwan": [["lib", "L’une des démocraties les plus libres d’Asie."], ["sec", "Très sûr au quotidien, mais tensions avec la Chine."], ["suc", "Droits de succession de 10 à 20 %."], ["edu", "Excellent niveau scolaire."]], "Corée du Sud": [["suc", "Droits de succession jusqu’à 50 %, parmi les plus élevés au monde."], ["edu", "Excellent niveau scolaire, mais pression très forte sur les élèves."], ["sec", "Très sûr."]], "Chypre": [["suc", "Pas de droits de succession."], ["fis", "Statut non-domicilié : pas d’impôt sur les dividendes et intérêts pendant 17 ans."]], "Malte": [["fis", "Statut non-domicilié : les revenus étrangers non rapatriés ne sont pas imposés."], ["viv", "Climat méditerranéen, mais île très dense."]], "Irlande": [["suc", "Droits de 33 % au-delà d’un abattement."], ["fis", "Taux marginal de 40 %, plus des prélèvements sociaux."], ["cul", "Siège européen de nombreuses entreprises technologiques."]], "Luxembourg": [["suc", "Exonération en ligne directe."], ["fis", "Taux marginal élevé."], ["sec", "Très sûr."]], "Maurice": [["fis", "Taux maximal de 20 %."], ["suc", "Pas de droits de succession."], ["gen", "Francophone, visas de résidence accessibles."]], "Qatar": [["fis", "Pas d’impôt sur le revenu."], ["lib", "Liberté d’expression et libertés personnelles restreintes."]], "Israël": [["cul", "Surnommé la « nation startup »."], ["sec", "Conflit armé en cours."]], "Chili": [["suc", "Droits de succession jusqu’à 25 %."], ["cul", "Pôle startup d’Amérique latine (programme Start-Up Chile)."]], "Mexique": [["sec", "Violence liée aux cartels, très variable selon les régions."], ["suc", "Pas de droits de succession."], ["viv", "Climat, cuisine et culture très riches."], ["gov", "Corruption et impunité élevées."]], "Bulgarie": [["fis", "Impôt sur le revenu à taux unique de 10 %."], ["suc", "Enfants exonérés de droits de succession."]], "Roumanie": [["fis", "Impôt sur le revenu à taux unique de 10 %."]], "Hongrie": [["fis", "Impôt sur le revenu à taux unique de 15 %."], ["lib", "Recul de certaines libertés publiques ces dernières années."]], "France": [["suc", "Jusqu’à 45 % en ligne directe, après un abattement de 100 000 € par enfant."], ["fis", "Taux marginal de 45 %, plus les prélèvements sociaux."], ["viv", "Art de vivre reconnu."], ["eta", "Dépense publique parmi les plus élevées au monde, autour de 57 % du PIB."]], "Belgique": [["suc", "Droits de succession élevés, même en ligne directe."], ["fis", "L’une des pressions fiscales les plus fortes d’Europe."]], "Danemark": [["gov", "Régulièrement en tête des classements anticorruption."], ["eta", "État-providence très développé, financé par des impôts élevés."]]};
+const NOTES = {"Estonie": [["ent", "Création d’entreprise en ligne en quelques heures, e-résidence ouverte aux étrangers."], ["fis", "Impôt sur le revenu à taux unique ; les bénéfices d’une société ne sont taxés que lorsqu’ils sont distribués."], ["suc", "Aucun droit de succession."], ["edu", "Parmi les meilleurs résultats PISA d’Europe."], ["cul", "Berceau de Skype et de nombreuses startups, entrepreneuriat très valorisé."], ["viv", "Hivers longs, froids et sombres."], ["sec", "Très sûr au quotidien, mais pays frontalier de la Russie."], ["gov", "Administration presque entièrement numérique."]], "Nouvelle-Zélande": [["lib", "Régulièrement dans le haut des classements de liberté personnelle."], ["suc", "Aucun droit de succession."], ["fis", "Taux marginal de 39 %, pas d’impôt général sur les plus-values."], ["ent", "Création d’entreprise parmi les plus simples au monde."], ["gen", "Très loin de la France, visas de résidence sélectifs."], ["gov", "Régulièrement en tête des classements anticorruption."], ["sej", "Visas de résidence très sélectifs (points, compétences recherchées ou gros investissement)."], ["dis", "L’un des pays les plus éloignés de la France : plus de 24 heures de voyage."]], "Suisse": [["suc", "Fixés par les cantons ; les enfants sont exonérés dans la plupart d’entre eux."], ["fis", "Très variable selon le canton et la commune ; Zoug ou Schwyz parmi les plus légers."], ["sec", "L’un des pays les plus sûrs au monde."], ["edu", "Écoles et universités de très haut niveau (EPFZ, EPFL)."], ["viv", "Coût de la vie parmi les plus élevés au monde."], ["eta", "Démocratie directe : les citoyens votent plusieurs fois par an par référendum."], ["sej", "Libre circulation avec l’UE, mais un titre de séjour exige un emploi ou des ressources suffisantes."]], "Australie": [["suc", "Pas de droits de succession."], ["fis", "Taux marginal de 45 %, plus un prélèvement santé."], ["viv", "Climat et vie en plein air."], ["lib", "Réglementation stricte sur certains sujets (armes, amendes routières)."], ["gen", "Visas de résidence sélectifs, très loin de la France."], ["cli", "Du tropical au nord au tempéré au sud."]], "Singapour": [["lib", "Règles très strictes et amendes élevées pour les petites infractions ; liberté d’expression encadrée."], ["fis", "Taux marginal de 24 %, pas d’impôt sur les plus-values."], ["suc", "Droits de succession abolis en 2008."], ["sec", "L’un des pays les plus sûrs au monde."], ["edu", "Niveau scolaire parmi les meilleurs au monde."], ["viv", "Chaleur humide toute l’année, coût du logement très élevé."], ["gov", "Parmi les pays les moins corrompus au monde."], ["eta", "Dépense publique faible, mais État très présent et directif."]], "Émirats arabes unis": [["fis", "Pas d’impôt sur le revenu des particuliers."], ["lib", "Liberté d’expression limitée et lois sur les mœurs."], ["sec", "Criminalité très faible."], ["suc", "Pas de droits de succession ; faire enregistrer un testament évite l’application des règles successorales religieuses."], ["sej", "Résidence facile via une société ou le visa doré."], ["lan", "L’anglais est la langue de travail courante."]], "Monaco": [["fis", "Pas d’impôt sur le revenu pour les résidents, sauf pour les Français : en vertu de la convention de 1963, ils restent imposés en France."], ["suc", "Exonération en ligne directe."], ["sec", "Surveillance et sécurité maximales."], ["viv", "Logement extrêmement cher."]], "Andorre": [["fis", "Impôt sur le revenu plafonné à 10 %."], ["suc", "Pas de droits de succession."], ["gen", "Résidence accessible avec un investissement ou une activité sur place."]], "Liechtenstein": [["fis", "Fiscalité légère."], ["suc", "Pas de droits de succession."], ["gen", "Titre de séjour très difficile à obtenir (quotas)."]], "Portugal": [["suc", "Pas de droits de succession ; droit de timbre de 10 % dont conjoint et enfants sont exemptés."], ["fis", "Taux marginal de 48 % ; l’ancien régime des résidents non habituels a été remplacé en 2024 par un dispositif plus restreint."], ["viv", "Climat, cuisine et proximité culturelle avec la France."], ["sec", "Parmi les pays les plus sûrs d’Europe."], ["aut", "Terrains ruraux abordables à l’intérieur du pays, destination prisée pour vivre en autonomie."], ["sej", "Libre installation pour les Français (Union européenne)."], ["dis", "Environ 2 heures de vol depuis la France."]], "Espagne": [["suc", "Très variable selon la région ; quasi nul pour les enfants dans plusieurs régions (Madrid, Andalousie)."], ["fis", "Taux marginal autour de 47 % selon la région."], ["viv", "Climat, vie sociale et gastronomie de premier plan."]], "Géorgie": [["fis", "Taux unique de 20 % ; le statut de petite entreprise est imposé à 1 % du chiffre d’affaires."], ["ent", "Démarches administratives très simples."], ["sec", "Tensions avec la Russie et instabilité politique récente."], ["gov", "Réformes anticorruption réussies dans les années 2000, mais inquiétudes récentes sur l’État de droit."], ["sej", "Les Français peuvent y séjourner un an sans visa."]], "Uruguay": [["fis", "Fiscalité territoriale, avec des exonérations temporaires pour les nouveaux résidents."], ["suc", "Pas de droits de succession."], ["sec", "Plus sûr que la moyenne sud-américaine, mais criminalité en hausse."], ["lib", "Démocratie stable et libérale."]], "Panama": [["fis", "Fiscalité territoriale : les revenus de source étrangère ne sont pas imposés."], ["suc", "Pas de droits de succession."], ["gen", "Programmes de résidence accessibles aux étrangers."], ["sej", "Visa « Nations amies » accessible aux Français."]], "Costa Rica": [["fis", "Fiscalité territoriale."], ["lib", "Démocratie stable, pays sans armée."], ["sec", "Criminalité en nette hausse ces dernières années."], ["viv", "Nature et climat exceptionnels."]], "Paraguay": [["fis", "Impôt sur le revenu à 10 % et fiscalité territoriale."], ["gen", "Résidence facile à obtenir, mais infrastructures limitées."], ["aut", "Terres agricoles parmi les moins chères d’Amérique du Sud."], ["sej", "Résidence permanente parmi les plus faciles à obtenir au monde."]], "Canada": [["suc", "Pas de droits de succession, mais les plus-values latentes sont imposées au décès."], ["fis", "Taux marginal combiné autour de 50 % selon la province."], ["edu", "Système scolaire de très bon niveau."], ["viv", "Hivers rudes."], ["gen", "Le Québec facilite l’intégration des francophones."], ["aut", "Beaucoup d’espace et de terres, mais hivers exigeants pour l’autonomie."], ["lan", "Le Québec est francophone."]], "États-Unis": [["suc", "Abattement fédéral de 15 millions de dollars par personne depuis 2026 ; une minorité d’États a son propre impôt."], ["sec", "Taux d’homicides environ cinq fois celui de l’Europe de l’Ouest, très variable selon les États."], ["cul", "La culture entrepreneuriale la plus forte au monde : l’échec y est vu comme une expérience."], ["fis", "Taux fédéral maximal de 37 %, plus l’impôt de l’État (nul au Texas ou en Floride)."], ["gen", "Visa difficile à obtenir pour s’installer durablement."], ["eta", "État fédéral plus léger qu’en Europe, avec de fortes différences d’un État à l’autre."], ["aut", "Certains États ruraux sont très souples pour construire et vivre en autonomie."], ["cli", "Tous les climats selon l’État, du froid de l’Alaska au subtropical de la Floride."]], "Japon": [["suc", "Droits de succession parmi les plus élevés au monde (jusqu’à 55 %)."], ["fis", "Taux marginal d’environ 55 % avec l’impôt local."], ["sec", "L’un des pays les plus sûrs au monde."], ["cul", "L’échec entrepreneurial reste mal vu socialement."], ["lib", "Libertés légales larges, mais forte pression sociale au conformisme."], ["aut", "Maisons rurales abandonnées (akiya) vendues à très bas prix, accessibles aux étrangers."]], "Thaïlande": [["viv", "Climat, cuisine et coût de la vie très attractifs."], ["suc", "Droits de succession uniquement au-delà de 100 millions de bahts."], ["lib", "Le crime de lèse-majesté est sévèrement puni."], ["ent", "Un étranger ne peut en principe ni détenir la majorité d’une entreprise ni posséder de terrain."], ["fis", "Les revenus étrangers rapatriés sont imposables depuis 2024."], ["gov", "Coups d’État à répétition, le dernier en 2014."], ["cli", "Chaud et humide toute l’année, avec une saison des pluies."], ["sej", "Visas longue durée possibles (retraite, télétravail, résidents à haut revenu)."]], "Vietnam": [["lib", "Régime à parti unique, liberté d’expression limitée."], ["cul", "Forte dynamique entrepreneuriale."], ["ent", "Restrictions sur la propriété étrangère."]], "Malaisie": [["suc", "Pas de droits de succession."], ["fis", "Les revenus de source étrangère des particuliers sont largement exonérés."], ["lib", "Lois restrictives sur certains sujets moraux et religieux."], ["gen", "Programme de visa long séjour (MM2H)."]], "Hong Kong": [["fis", "Taux maximal de 15 à 17 %, pas d’impôt sur les plus-values."], ["suc", "Droits de succession abolis en 2006."], ["lib", "Libertés civiles fortement réduites depuis la loi sur la sécurité nationale de 2020."], ["eta", "Dépense publique faible et économie très ouverte."]], "Taïwan": [["lib", "L’une des démocraties les plus libres d’Asie."], ["sec", "Très sûr au quotidien, mais tensions avec la Chine."], ["suc", "Droits de succession de 10 à 20 %."], ["edu", "Excellent niveau scolaire."]], "Corée du Sud": [["suc", "Droits de succession jusqu’à 50 %, parmi les plus élevés au monde."], ["edu", "Excellent niveau scolaire, mais pression très forte sur les élèves."], ["sec", "Très sûr."]], "Chypre": [["suc", "Pas de droits de succession."], ["fis", "Statut non-domicilié : pas d’impôt sur les dividendes et intérêts pendant 17 ans."]], "Malte": [["fis", "Statut non-domicilié : les revenus étrangers non rapatriés ne sont pas imposés."], ["viv", "Climat méditerranéen, mais île très dense."]], "Irlande": [["suc", "Droits de 33 % au-delà d’un abattement."], ["fis", "Taux marginal de 40 %, plus des prélèvements sociaux."], ["cul", "Siège européen de nombreuses entreprises technologiques."]], "Luxembourg": [["suc", "Exonération en ligne directe."], ["fis", "Taux marginal élevé."], ["sec", "Très sûr."]], "Maurice": [["fis", "Taux maximal de 20 %."], ["suc", "Pas de droits de succession."], ["gen", "Francophone, visas de résidence accessibles."], ["lan", "Français et créole parlés partout, anglais langue officielle."]], "Qatar": [["fis", "Pas d’impôt sur le revenu."], ["lib", "Liberté d’expression et libertés personnelles restreintes."]], "Israël": [["cul", "Surnommé la « nation startup »."], ["sec", "Conflit armé en cours."]], "Chili": [["suc", "Droits de succession jusqu’à 25 %."], ["cul", "Pôle startup d’Amérique latine (programme Start-Up Chile)."], ["cli", "Du désert au nord au climat froid en Patagonie."]], "Mexique": [["sec", "Violence liée aux cartels, très variable selon les régions."], ["suc", "Pas de droits de succession."], ["viv", "Climat, cuisine et culture très riches."], ["gov", "Corruption et impunité élevées."]], "Bulgarie": [["fis", "Impôt sur le revenu à taux unique de 10 %."], ["suc", "Enfants exonérés de droits de succession."], ["aut", "Maisons de village et terrains parmi les moins chers de l’Union européenne."]], "Roumanie": [["fis", "Impôt sur le revenu à taux unique de 10 %."], ["aut", "Campagne très abordable, tradition vivante de l’autoproduction."]], "Hongrie": [["fis", "Impôt sur le revenu à taux unique de 15 %."], ["lib", "Recul de certaines libertés publiques ces dernières années."]], "France": [["suc", "Jusqu’à 45 % en ligne directe, après un abattement de 100 000 € par enfant."], ["fis", "Taux marginal de 45 %, plus les prélèvements sociaux."], ["viv", "Art de vivre reconnu."], ["eta", "Dépense publique parmi les plus élevées au monde, autour de 57 % du PIB."], ["aut", "Terrain rural abordable, mais règles d’urbanisme strictes."]], "Belgique": [["suc", "Droits de succession élevés, même en ligne directe."], ["fis", "L’une des pressions fiscales les plus fortes d’Europe."]], "Danemark": [["gov", "Régulièrement en tête des classements anticorruption."], ["eta", "État-providence très développé, financé par des impôts élevés."]], "Suède": [["aut", "Droit d’accès à la nature (allemansrätten) et maisons de campagne abordables."]], "Philippines": [["aut", "Un étranger ne peut pas posséder de terrain."]], "Albanie": [["sej", "Séjour d’un an sans visa pour les Français."]]};
 
 /* ====== Analyse ====== */
 const ord = n => n===1 ? '1er' : n+'e';
@@ -702,18 +755,41 @@ const METHOD = `<p>Le diagnostic combine trois éléments : tes réponses, qui f
 <li><b>Bien-être</b> : équilibre vie pro-perso (OCDE, Better Life Index), qualité de l’air (OMS), accès à la nature, rythme de vie.</li>
 <li><b>Coût de la vie</b> : niveau des prix des loyers, des courses et des factures par rapport à la France (Numbeo, parités de pouvoir d’achat de la Banque mondiale). 10 = très bon marché.</li>
 <li><b>Pouvoir d’achat local</b> : salaire local moyen rapporté au loyer et au panier de courses. 10 = salaires confortables par rapport au coût de la vie.</li>
+<li><b>Climat</b> : climat dominant des zones habitées (classification de Köppen). 0 = froid, 10 = tropical. Comme la place de l’État, ce critère mesure la distance avec le climat que tu préfères, sans « meilleure » valeur.</li>
+<li><b>Vie autonome</b> : prix du foncier rural, droit des étrangers à posséder un terrain, souplesse des règles de construction et d’urbanisme, conditions pour cultiver.</li>
+<li><b>Facilité d’installation</b> : démarches pour un citoyen français. 10 = libre installation (Union européenne et espace économique européen), puis programmes de résidence plus ou moins accessibles.</li>
+<li><b>Langue</b> : 10 = pays francophone ; 7 = anglais courant ou langue latine (espagnol, italien, portugais) ; en dessous, langue éloignée et peu d’anglais au quotidien.</li>
+<li><b>Proximité avec la France</b> : temps de trajet approximatif depuis Paris. 10 = moins de 2 à 3 heures de vol, 1 = plus de 20 heures.</li>
 <li><b>Mentalité pro-entrepreneur</b> : Global Entrepreneurship Monitor (image de l’entrepreneur dans la société, peur de l’échec, envie de créer).</li>
-</ul><p>Pour une soixantaine de pays moins courants, les six derniers critères (démocratie, santé, alimentation, bien-être, coût de la vie, pouvoir d’achat) sont extrapolés à partir des autres notes ; la page le signale. L’hexagone regroupe les critères en six familles, chacune notée comme la moyenne de ses critères pondérée par ton importance.</p><p>Les notes sont pensées pour un résident de nationalité française : par exemple, Monaco n’exonère pas d’impôt sur le revenu les Français, qui y restent imposés en France.</p>`;
+</ul><p>Pour une soixantaine de pays moins courants, les six derniers critères (démocratie, santé, alimentation, bien-être, coût de la vie, pouvoir d’achat) sont extrapolés à partir des autres notes ; la page le signale. Le graphique regroupe les 21 critères en dix familles. Deux questions sur ta situation (enfants, source de revenus) permettent de sauter celles qui ne te concernent pas, chacune notée comme la moyenne de ses critères pondérée par ton importance.</p><p>Les notes sont pensées pour un résident de nationalité française : par exemple, Monaco n’exonère pas d’impôt sur le revenu les Français, qui y restent imposés en France.</p>`;
+
+/* ====== Questions posées : 25 sur les 40 de la banque ======
+   Les autres restent dans QUESTIONS pour garder les index des profils déjà enregistrés. */
+const ACTIVE = new Set([46, 47,  40, 3, 35, 43, 44, 45,  0, 22, 24, 20, 5, 2, 1, 15, 27, 12, 39, 4, 32, 30, 41]);
+// Questions conditionnelles
+const GK = QUESTIONS.findIndex(q=>q.gate==='kids'), GI = QUESTIONS.findIndex(q=>q.gate==='income');
+QUESTIONS[12].need = 'kids';   // école
+QUESTIONS[39].need = 'salary'; // reste à vivre avec un salaire local
+function visible(k, ans){
+  const q = QUESTIONS[k];
+  if(q.need==='kids') return ans[GK]!==1;
+  if(q.need==='salary') return ans[GI]===0;
+  return true;
+}
 
 /* ====== Ordre du quiz : par famille ====== */
 const famOf = q => FAMILIES.findIndex(f=>f.axes.includes(q.axis));
-const ORDER = QUESTIONS.map((q,i)=>i).sort((a,b)=> famOf(QUESTIONS[a])-famOf(QUESTIONS[b]) || axIdx(QUESTIONS[a].axis)-axIdx(QUESTIONS[b].axis) || a-b);
+const ORDER = QUESTIONS.map((q,i)=>i).filter(i=>ACTIVE.has(i)).sort((a,b)=> famOf(QUESTIONS[a])-famOf(QUESTIONS[b]) || axIdx(QUESTIONS[a].axis)-axIdx(QUESTIONS[b].axis) || a-b);
+
+let ORD = ORDER;
+const refreshOrder = ans => { ORD = ORDER.filter(k=>visible(k, ans)); };
 
 /* ====== Écrans ====== */
 function renderHome(){
   const names = Object.keys(store.profiles).sort((a,b)=>store.profiles[b].date.localeCompare(store.profiles[a].date));
   app.innerHTML = `
   <div class="panel home"><div class="start">
+    ${store.draft ? `<div class="resume"><p><b>QCM de ${esc(store.draft.name)} en cours</b><br>Question ${store.draft.qi+1} : tes réponses sont gardées.</p><button class="cta" data-act="resume">Reprendre là où j’en étais</button></div>` : ''}
     <div class="field">
       <label for="name">Ton prénom</label>
       <input id="name" autocomplete="given-name" maxlength="40" value="${esc(draftName)}" placeholder="Par exemple Charlie">
@@ -733,22 +809,39 @@ function renderHome(){
   input.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuiz(); });
 }
 
+function saveDraft(){ store.draft = {name: current, answers: draft.map(a=>a===undefined?null:a), qi}; saveStore(); }
+function clearDraft(){ delete store.draft; saveStore(); }
+function resumeQuiz(){
+  const d = store.draft; if(!d) return;
+  current = d.name; draft = QUESTIONS.map((_,i)=> i < d.answers.length ? d.answers[i] : undefined); refreshOrder(draft); qi = Math.min(d.qi, ORD.length); view='quiz'; render();
+}
 function startQuiz(){
   const n = draftName.trim();
   if(!n){ const e=document.getElementById('err'); if(e) e.textContent='Entre ton prénom pour commencer.'; return; }
   current = n; draft = QUESTIONS.map(()=>undefined); qi = 0; view = 'quiz'; render();
 }
 
+function stepsHTML(cur){
+  return `<ol class="steps" aria-label="Thématiques du questionnaire">${[{short:'Ta situation'}, ...FAMILIES].map((f,j)=>{
+    const fi = j-1;
+    const qs = ORD.filter(k=>famOf(QUESTIONS[k])===fi); if(!qs.length) return '';
+    const done = qs.filter(k=>ORD.indexOf(k)<qi).length, all = done===qs.length;
+    const st = fi===cur ? 'current' : (all ? 'done' : '');
+    return `<li class="step ${st}"${fi===cur?' aria-current="step"':''}>${all&&fi!==cur?'✓ ':''}${f.short}<small>${done}/${qs.length}</small></li>`;
+  }).join('')}</ol>`;
+}
 function renderQuiz(){
-  if(qi >= QUESTIONS.length){
+  refreshOrder(draft);
+  if(qi >= ORD.length){
     store.profiles[current] = {answers: draft.map(a=>a===undefined?null:a), date: new Date().toISOString()};
-    store.last = current; saveStore(); view='result'; selected=0; return render();
+    store.last = current; delete store.draft; saveStore(); view='result'; selected=0; return render();
   }
-  const k = ORDER[qi], Q = QUESTIONS[k], ax = AXES.find(a=>a.id===Q.axis), fam = FAMILIES[famOf(Q)];
+  const k = ORD[qi], Q = QUESTIONS[k], ax = Q.gate ? {label:'Pour adapter la suite'} : AXES.find(a=>a.id===Q.axis), fam = Q.gate ? {label:'Ta situation'} : FAMILIES[famOf(Q)];
   app.innerHTML = `
   <div class="panel quiz">
-    <div class="progress"><i style="width:${qi/QUESTIONS.length*100}%"></i></div>
-    <p class="qtheme">${fam.label}</p><p class="qcount">Question ${qi+1} sur ${QUESTIONS.length}, ${ax.label.toLowerCase()}</p>
+    ${stepsHTML(famOf(Q))}
+    <div class="progress"><i style="width:${qi/ORD.length*100}%"></i></div>
+    <p class="qtheme">${fam.label}</p><p class="qcount">Question ${qi+1} sur ${ORD.length}, ${ax.label.toLowerCase()}. ${ORD.length-qi>1?`Plus que ${ORD.length-qi-1} après celle-ci, environ ${Math.max(1,Math.ceil((ORD.length-qi-1)/6))} min.`:'Dernière question !'}</p>
     <p class="qtext">${Q.q}</p>
     <div class="opts">${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${draft[k]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}</div>
     <div class="nav">
@@ -761,7 +854,7 @@ function renderQuiz(){
 function renderResult(){
   const p = store.profiles[current];
   if(!p){ view='home'; return render(); }
-  const answers = QUESTIONS.map((_,i)=>p.answers[i]==null?null:p.answers[i]), partial = answers.some(a=>a==null);
+  const answers = QUESTIONS.map((_,i)=>p.answers[i]==null?null:p.answers[i]), partial = answers.some((a,i)=>a==null && ACTIVE.has(i) && !QUESTIONS[i].gate && visible(i, answers));
   const list = ranked(answers, region), nd = needs(answers);
   if(selected >= list.length) selected = 0;
   const c = list[selected], good=[], weak=[], unknown=[];
@@ -812,6 +905,7 @@ function render(){
   else if(view==='quiz') renderQuiz();
   else renderResult();
   window.scrollTo({top:0});
+  const cs = document.querySelector('.step.current'); if(cs) cs.scrollIntoView({block:'nearest', inline:'center'});
 }
 
 document.addEventListener('click', e=>{
@@ -819,14 +913,15 @@ document.addEventListener('click', e=>{
   const d = t.dataset;
   if(d.themeSet){ applyTheme(d.themeSet); return; }
   if(d.act==='start') startQuiz();
+  else if(d.act==='resume') resumeQuiz();
   else if(d.act==='redo'){ draftName = current; startQuiz(); }
   else if(d.act==='home'){ draftName=''; view='home'; render(); }
   else if(d.see!=null){ current = app._names[+d.see]; store.last=current; saveStore(); selected=0; region='Tous'; view='result'; render(); }
   else if(d.del!=null){ const n = app._names[+d.del];
     if(confirm(`Supprimer le profil de ${n} ?`)){ delete store.profiles[n]; if(store.last===n) store.last=null; saveStore(); render(); } }
-  else if(d.o!=null){ draft[ORDER[qi]]=+d.o; qi++; render(); }
-  else if(d.nav==='skip'){ draft[ORDER[qi]]=null; qi++; render(); }
-  else if(d.nav==='back'){ if(qi===0){ view = store.profiles[current]?'result':'home'; } else qi--; render(); }
+  else if(d.o!=null){ draft[ORD[qi]]=+d.o; refreshOrder(draft); qi++; if(qi<ORD.length) saveDraft(); render(); }
+  else if(d.nav==='skip'){ draft[ORD[qi]]=null; refreshOrder(draft); qi++; if(qi<ORD.length) saveDraft(); render(); }
+  else if(d.nav==='back'){ if(qi===0){ clearDraft(); view = store.profiles[current]?'result':'home'; } else { qi--; saveDraft(); } render(); }
   else if(d.i!=null){ selected=+d.i; render(); }
   else if(d.region){ region=d.region; selected=0; render(); }
 });

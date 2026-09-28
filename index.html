@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("qcm-pays:theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
 <title>Quel pays te correspond ?</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#EDF1F4; --surface:#FFFFFF; --ink:#13233A; --muted:#5B6B7F; --line:#D5DDE5;
+  color-scheme:light;
   --accent:#0F7F82; --accent-soft:#D6EEEE; --want:#D39A00; --bad:#B8403A; --good:#1E8A52;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
@@ -16,12 +19,14 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0E1622; --surface:#172233; --ink:#E6ECF2; --muted:#93A3B6; --line:#2A3A50;
+    color-scheme:dark;
     --accent:#3CC2C4; --accent-soft:#163A44; --want:#F0B82C; --bad:#E0716A; --good:#5BC98C;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0E1622; --surface:#172233; --ink:#E6ECF2; --muted:#93A3B6; --line:#2A3A50;
-  --accent:#3CC2C4; --accent-soft:#163A44; --want:#F0B82C; --bad:#E0716A; --good:#5BC98C;
+  color-scheme:dark;
+    --accent:#3CC2C4; --accent-soft:#163A44; --want:#F0B82C; --bad:#E0716A; --good:#5BC98C;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -85,13 +90,50 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .actions{display:flex;gap:10px;margin-top:18px}
 .actions .cta{margin-top:0}
 .cta.secondary{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+/* Responsive */
+.wrap{max-width:1120px;padding:clamp(16px,3vw,40px) clamp(16px,4vw,48px) 48px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-size:clamp(1.8rem,4vw,2.8rem)}
+.lead{max-width:62ch}
+.panel{padding:clamp(18px,3vw,32px)}
+.theme{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.theme button{border:0;background:transparent;border-radius:999px;padding:6px 13px;font-size:.85rem;color:var(--muted)}
+.theme button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.quiz{max-width:860px;margin:0 auto}
+.opts{display:grid;gap:10px;grid-template-columns:1fr}
+.opts .opt{margin-bottom:0;height:100%}
+.result{display:grid;gap:18px;grid-template-areas:"filters" "viz" "details"}
+.filters{grid-area:filters;min-width:0}
+.viz{grid-area:viz;min-width:0}
+.details{grid-area:details;min-width:0}
+.details .cols{margin-top:0}
+@media (min-width:760px){
+  .opts{grid-template-columns:repeat(3,1fr)}
+  .qtext{font-size:1.75rem}
+}
+@media (min-width:860px){
+  .home:has(.saved){display:grid;grid-template-columns:1fr 1fr;column-gap:48px;align-items:start}
+  .home .saved{margin-top:0}
+}
+@media (min-width:960px){
+  .result{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"viz filters" "viz details";column-gap:48px;align-items:start}
+  .ranking{flex-wrap:wrap;overflow:visible}
+  .viz{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+  .hex{max-width:540px}
+  .score .display{font-size:3.6rem}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <main class="wrap">
-  <h1>Quel pays te correspond ?</h1>
-  <p class="lead">Six questions sur ce qui compte vraiment pour toi. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
+  <header class="top">
+    <h1>Quel pays te correspond ?</h1>
+    <div class="theme" role="group" aria-label="Thème">
+      <button data-theme-set="auto">Auto</button><button data-theme-set="light">Clair</button><button data-theme-set="dark">Sombre</button>
+    </div>
+  </header>
+  <p class="lead">Douze questions sur ce qui compte vraiment pour toi. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
   <section id="app"></section>
 </main>
 
@@ -131,7 +173,31 @@ const QUESTIONS = [
   {axis:'fis', q:'Combien d’impôts sur tes revenus es-tu prêt à payer ?', opts:[
     {t:'Le moins possible', req:10, w:2},
     {t:'Un niveau raisonnable', req:6, w:1},
-    {t:'Beaucoup, si les services publics suivent', req:3, w:0.5}]}
+    {t:'Beaucoup, si les services publics suivent', req:3, w:0.5}]},
+  {axis:'lib', q:'Pouvoir dire ce que tu penses, y compris critiquer le gouvernement, sans risquer d’ennuis, c’est…', opts:[
+    {t:'Indispensable', req:10, w:3},
+    {t:'Souhaitable, mais je peux me taire', req:6, w:1.5},
+    {t:'Pas important, je ne parle pas de politique', req:3, w:0.5}]},
+  {axis:'ent', q:'Obtenir un visa ou un titre de séjour pour travailler à ton compte, tu veux que ce soit…', opts:[
+    {t:'Facile, avec un statut clair pour les entrepreneurs', req:9, w:2},
+    {t:'Faisable, même si c’est long', req:6, w:1},
+    {t:'Pas concerné, je serai salarié ou rentier', req:3, w:0.5}]},
+  {axis:'suc', q:'Si tu avais le choix, tu transmettrais ton patrimoine…', opts:[
+    {t:'Intégralement, sans que l’État en prenne une part', req:10, w:2},
+    {t:'En laissant une petite part à l’État', req:6, w:1},
+    {t:'Je préfère tout profiter de mon vivant', req:0, w:0}]},
+  {axis:'sec', q:'Tes enfants doivent-ils pouvoir rentrer seuls de l’école à pied ?', opts:[
+    {t:'Oui, sans aucune crainte', req:10, w:3},
+    {t:'Oui, avec quelques précautions', req:7, w:2},
+    {t:'Non, je les accompagnerai de toute façon', req:4, w:1}]},
+  {axis:'viv', q:'Sortir, bien manger, avoir une vie sociale animée, tu en as besoin…', opts:[
+    {t:'Tous les jours', req:10, w:2},
+    {t:'Surtout le week-end', req:7, w:1},
+    {t:'Rarement, je suis plutôt casanier', req:4, w:0.5}]},
+  {axis:'fis', q:'Sur tes revenus d’entreprise ou de placements, tu veux…', opts:[
+    {t:'Une fiscalité très basse, voire nulle', req:10, w:2},
+    {t:'Un taux raisonnable', req:6, w:1},
+    {t:'Peu importe', req:3, w:0.3}]}
 ];
 
 // Scores indicatifs 0-10 : [lib, ent, suc, sec, viv, fis]
@@ -163,6 +229,15 @@ function loadStore(){
 function saveStore(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
 let store = loadStore();
 
+/* ====== Thème ====== */
+function applyTheme(t){
+  const root = document.documentElement;
+  if(t==='light'||t==='dark') root.dataset.theme = t; else { delete root.dataset.theme; t='auto'; }
+  try{ localStorage.setItem('qcm-pays:theme', t); }catch(e){}
+  document.querySelectorAll('[data-theme-set]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.themeSet===t));
+}
+applyTheme(document.documentElement.dataset.theme || 'auto');
+
 /* ====== État ====== */
 const app = document.getElementById('app');
 let current = store.last && store.profiles[store.last] ? store.last : null;
@@ -173,7 +248,16 @@ const esc = t => String(t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'
 const fmtDate = iso => { try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(e){ return ''; } };
 
 /* ====== Calcul ====== */
-function needs(answers){ return AXES.map((a,i)=>{ const x = answers[i]; return x==null ? null : QUESTIONS[i].opts[x]; }); }
+function needs(answers){
+  return AXES.map(a=>{
+    let sr=0, sw=0, n=0;
+    QUESTIONS.forEach((q,i)=>{ if(q.axis!==a.id) return; const x=answers[i]; if(x==null) return;
+      const o=q.opts[x]; n++; sw+=o.w; sr+=o.req*o.w; });
+    if(!n) return null;
+    return { req: sw ? Math.round(sr/sw*10)/10 : 0, w: sw/n };
+  });
+}
+const num = v => String(v).replace('.', ',');
 function score(c, nd){
   let pen=0, den=0;
   nd.forEach((o,i)=>{ if(!o||!o.w) return; den += o.w*o.req; pen += o.w*Math.max(0,o.req-c.v[i]); });
@@ -195,22 +279,23 @@ function hexSVG(c, nd){
   g+=`<polygon points="${poly(c.v)}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5"/>`;
   c.v.forEach((v,i)=>{ const [x,y]=pt(i,v); const miss=nd[i]&&nd[i].w&&v<nd[i].req; g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${miss?'var(--bad)':'var(--accent)'}"/>`; });
   AXES.forEach((a,i)=>{ const [x,y]=pt(i,10,138); const an=Math.abs(x-170)<5?'middle':(x>170?'start':'end');
-    g+=`<text x="${x}" y="${y+4}" text-anchor="${an}" font-size="12.5" font-weight="600" fill="${nd[i]?'var(--ink)':'var(--muted)'}">${a.short}${nd[i]?'':' (?)'}</text>`;
-    g+=`<text x="${x}" y="${y+19}" text-anchor="${an}" font-size="11" fill="var(--muted)">${c.v[i]}/10</text>`; });
-  return `<svg class="hex" viewBox="0 0 340 330" role="img" aria-label="Hexagone de correspondance ${esc(c.n)}">${g}</svg>`;
+    g+=`<text x="${x}" y="${y+4}" text-anchor="${an}" font-size="15" font-weight="600" fill="${nd[i]?'var(--ink)':'var(--muted)'}">${a.short}${nd[i]?'':' (?)'}</text>`;
+    g+=`<text x="${x}" y="${y+21}" text-anchor="${an}" font-size="13" fill="var(--muted)">${c.v[i]}/10</text>`; });
+  return `<svg class="hex" viewBox="-70 0 480 335" role="img" aria-label="Hexagone de correspondance ${esc(c.n)}">${g}</svg>`;
 }
 
 /* ====== Écrans ====== */
 function renderHome(){
   const names = Object.keys(store.profiles).sort((a,b)=>store.profiles[b].date.localeCompare(store.profiles[a].date));
   app.innerHTML = `
-  <div class="panel">
+  <div class="panel home"><div class="start">
     <div class="field">
       <label for="name">Ton prénom</label>
       <input id="name" autocomplete="given-name" maxlength="40" value="${esc(draftName)}" placeholder="Par exemple Charlie">
       <p class="err" id="err" aria-live="polite"></p>
     </div>
     <button class="cta" data-act="start" style="margin-top:6px">Commencer le QCM</button>
+    </div>
     ${names.length ? `<div class="saved"><h2>Profils enregistrés sur cet appareil</h2>
       ${names.map((n,i)=>{ const p=store.profiles[n], top=ranked(p.answers,'Tous')[0];
         return `<div class="row"><div class="info"><b>${esc(n)}</b><small>${top?esc(top.n)+' à '+top.s+'%':''}, le ${fmtDate(p.date)}</small></div>
@@ -236,11 +321,11 @@ function renderQuiz(){
   }
   const Q = QUESTIONS[qi], ax = AXES.find(a=>a.id===Q.axis);
   app.innerHTML = `
-  <div class="panel">
+  <div class="panel quiz">
     <div class="progress"><i style="width:${qi/QUESTIONS.length*100}%"></i></div>
     <p class="qtheme">Question ${qi+1} sur ${QUESTIONS.length} : ${ax.label}</p>
     <p class="qtext">${Q.q}</p>
-    ${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${draft[qi]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}
+    <div class="opts">${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${draft[qi]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}</div>
     <div class="nav">
       <button class="link" data-nav="back">${qi===0?'Annuler':'Question précédente'}</button>
       <button class="link" data-nav="skip">Passer</button>
@@ -251,7 +336,7 @@ function renderQuiz(){
 function renderResult(){
   const p = store.profiles[current];
   if(!p){ view='home'; return render(); }
-  const answers = p.answers, partial = answers.some(a=>a==null);
+  const answers = QUESTIONS.map((_,i)=>p.answers[i]==null?null:p.answers[i]), partial = answers.some(a=>a==null);
   const list = ranked(answers, region), nd = needs(answers);
   if(selected >= list.length) selected = 0;
   const c = list[selected], good=[], weak=[], unknown=[];
@@ -261,7 +346,7 @@ function renderResult(){
     if(!o.w) return;
     const gap = o.req - c.v[i];
     if(gap<=0) good.push(`${a.label} <small>(${c.v[i]}/10)</small>`);
-    else weak.push({t:`${a.label} <small>(${c.v[i]}/10, attendu ${o.req})</small>`, k:gap*o.w});
+    else weak.push({t:`${a.label} <small>(${c.v[i]}/10, attendu ${num(o.req)})</small>`, k:gap*o.w});
   });
   weak.sort((x,y)=>y.k-x.k);
   const regions = ['Tous', ...new Set(COUNTRIES.map(c=>c.r))];
@@ -269,16 +354,16 @@ function renderResult(){
   app.innerHTML = `
   <div class="panel">
     <div class="who"><h2>${name}</h2>${partial?'<span class="badge">Réponses partielles</span>':''}</div>
-    <div class="tabs" role="group" aria-label="Région" style="margin:10px 0 0">
+    <div class="result"><div class="filters"><div class="tabs" role="group" aria-label="Région" style="margin:10px 0 0">
       ${regions.map(r=>`<button class="chip" data-region="${r}" aria-pressed="${r===region}">${r}</button>`).join('')}
     </div>
     <div class="ranking">
       ${list.slice(0,6).map((x,i)=>`<button class="rank" data-i="${i}" aria-pressed="${i===selected}"><b>${x.n}</b><span>${x.s}%</span></button>`).join('')}
-    </div>
-    <p class="score"><span class="display">${c.s}%</span><br><span style="color:var(--muted)">${c.n}</span></p>
+    </div></div>
+    <div class="viz"><p class="score"><span class="display">${c.s}%</span><br><span style="color:var(--muted)">${c.n}</span></p>
     ${hexSVG(c, nd)}
-    <div class="legend"><span><i style="background:var(--accent)"></i>${c.n}</span><span><i style="background:var(--want)"></i>Exigences de ${name}</span></div>
-    <div class="cols">
+    <div class="legend"><span><i style="background:var(--accent)"></i>${c.n}</span><span><i style="background:var(--want)"></i>Exigences de ${name}</span></div></div>
+    <div class="details"><div class="cols">
       <div class="good"><h3>Forces</h3>${good.length?`<ul>${good.map(g=>`<li>${g}</li>`).join('')}</ul>`:'<p class="note">Aucune exigence pleinement remplie.</p>'}</div>
       <div class="weak"><h3>Faiblesses</h3>${weak.length?`<ul>${weak.map(w=>`<li>${w.t}</li>`).join('')}</ul>`:'<p class="note">Rien ne coince.</p>'}</div>
     </div>
@@ -288,7 +373,7 @@ function renderResult(){
       <button class="cta" data-act="redo">Refaire le QCM</button>
       <button class="cta secondary" data-act="home">Autre profil</button>
     </div>
-  </div>`;
+  </div></div></div>`;
 }
 
 function render(){
@@ -301,6 +386,7 @@ function render(){
 document.addEventListener('click', e=>{
   const t = e.target.closest('button'); if(!t) return;
   const d = t.dataset;
+  if(d.themeSet){ applyTheme(d.themeSet); return; }
   if(d.act==='start') startQuiz();
   else if(d.act==='redo'){ draftName = current; startQuiz(); }
   else if(d.act==='home'){ draftName=''; view='home'; render(); }

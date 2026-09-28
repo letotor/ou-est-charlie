@@ -122,6 +122,22 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
   .hex{max-width:540px}
   .score .display{font-size:3.6rem}
 }
+.analysis{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.analysis h3{font-size:1rem;margin:0 0 6px}
+.analysis p{margin:0 0 10px;font-size:.95rem}
+.axisrank,.full{list-style:none;margin:0;padding:0}
+.axisrank li{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;padding:4px 0;border-bottom:1px dashed var(--line)}
+.axisrank b{white-space:nowrap}
+.more{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.more summary{cursor:pointer;font-weight:600}
+.more ul{padding-left:18px;font-size:.9rem}
+.more p{font-size:.9rem}
+.full{max-height:340px;overflow-y:auto;margin-top:10px;counter-reset:r}
+.full li{counter-increment:r}
+.fullrow{display:flex;width:100%;gap:10px;align-items:baseline;border:0;background:transparent;padding:6px 4px;border-radius:8px;text-align:left}
+.fullrow::before{content:counter(r);color:var(--muted);min-width:2.2em;font-size:.85rem}
+.fullrow span{flex:1}
+.fullrow[aria-pressed="true"]{background:var(--accent-soft)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -133,7 +149,7 @@ h1{font-size:clamp(1.8rem,4vw,2.8rem)}
       <button data-theme-set="auto">Auto</button><button data-theme-set="light">Clair</button><button data-theme-set="dark">Sombre</button>
     </div>
   </header>
-  <p class="lead">Douze questions sur ce qui compte vraiment pour toi. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
+  <p class="lead">Douze questions sur ce qui compte vraiment pour toi, comparées à 183 pays. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
   <section id="app"></section>
 </main>
 
@@ -200,23 +216,191 @@ const QUESTIONS = [
     {t:'Peu importe', req:3, w:0.3}]}
 ];
 
-// Scores indicatifs 0-10 : [lib, ent, suc, sec, viv, fis]
+// Estimations 0-10 calibrées sur des indices publics : [lib, ent, suc, sec, viv, fis]
 const COUNTRIES = [
-  {n:'Nouvelle-Zélande', r:'Océanie', v:[9,8,10,9,8,5]},
-  {n:'Suisse',           r:'Europe',  v:[8,8,8,10,7,6]},
-  {n:'Portugal',         r:'Europe',  v:[8,5,9,8,9,4]},
-  {n:'Géorgie',          r:'Europe',  v:[8,8,9,7,7,9]},
-  {n:'Émirats arabes unis', r:'Moyen-Orient', v:[4,9,10,10,6,10]},
-  {n:'Singapour',        r:'Asie',    v:[3,10,10,10,6,8]},
-  {n:'Hong Kong',        r:'Asie',    v:[4,9,10,8,6,9]},
-  {n:'Japon',            r:'Asie',    v:[6,5,1,10,8,4]},
-  {n:'Thaïlande',        r:'Asie',    v:[6,5,8,5,9,7]},
-  {n:'Malaisie',         r:'Asie',    v:[4,6,10,6,7,7]},
-  {n:'Philippines',      r:'Asie',    v:[5,4,6,3,7,6]},
-  {n:'États-Unis',       r:'Amérique', v:[8,9,6,5,7,5]},
-  {n:'Panama',           r:'Amérique', v:[7,7,10,6,8,8]},
-  {n:'Uruguay',          r:'Amérique', v:[8,6,10,6,7,6]},
-  {n:'Costa Rica',       r:'Amérique', v:[8,5,10,5,9,7]}
+  {n:'France', r:'Europe', v:[8,6,1,6,9,2]},
+  {n:'Belgique', r:'Europe', v:[8,6,1,6,7,2]},
+  {n:'Luxembourg', r:'Europe', v:[9,8,9,9,7,4]},
+  {n:'Pays-Bas', r:'Europe', v:[9,8,4,8,7,2]},
+  {n:'Allemagne', r:'Europe', v:[8,7,4,7,6,3]},
+  {n:'Autriche', r:'Europe', v:[8,7,10,9,7,1]},
+  {n:'Suisse', r:'Europe', v:[9,8,8,10,7,6]},
+  {n:'Liechtenstein', r:'Europe', v:[8,8,10,10,6,8]},
+  {n:'Monaco', r:'Europe', v:[7,8,10,10,8,10]},
+  {n:'Andorre', r:'Europe', v:[8,7,10,10,7,9]},
+  {n:'Saint-Marin', r:'Europe', v:[8,6,8,9,6,6]},
+  {n:'Italie', r:'Europe', v:[8,5,7,6,9,3]},
+  {n:'Espagne', r:'Europe', v:[8,6,6,7,10,3]},
+  {n:'Portugal', r:'Europe', v:[9,6,9,9,9,3]},
+  {n:'Malte', r:'Europe', v:[8,7,8,8,8,5]},
+  {n:'Chypre', r:'Europe', v:[8,7,10,8,8,5]},
+  {n:'Grèce', r:'Europe', v:[8,5,6,7,9,4]},
+  {n:'Royaume-Uni', r:'Europe', v:[8,8,3,6,6,3]},
+  {n:'Irlande', r:'Europe', v:[9,8,3,9,7,3]},
+  {n:'Islande', r:'Europe', v:[9,7,5,10,6,4]},
+  {n:'Norvège', r:'Europe', v:[9,7,10,9,6,3]},
+  {n:'Suède', r:'Europe', v:[9,8,10,7,6,2]},
+  {n:'Danemark', r:'Europe', v:[9,9,4,9,7,2]},
+  {n:'Finlande', r:'Europe', v:[9,8,3,9,6,2]},
+  {n:'Estonie', r:'Europe', v:[9,9,10,8,5,7]},
+  {n:'Lettonie', r:'Europe', v:[8,7,10,7,5,6]},
+  {n:'Lituanie', r:'Europe', v:[8,8,8,7,5,6]},
+  {n:'Pologne', r:'Europe', v:[7,7,9,8,6,6]},
+  {n:'Tchéquie', r:'Europe', v:[8,8,10,9,6,7]},
+  {n:'Slovaquie', r:'Europe', v:[7,6,10,8,5,7]},
+  {n:'Hongrie', r:'Europe', v:[6,7,10,8,6,8]},
+  {n:'Slovénie', r:'Europe', v:[8,6,9,9,6,3]},
+  {n:'Croatie', r:'Europe', v:[7,6,10,8,8,5]},
+  {n:'Serbie', r:'Europe', v:[6,6,9,7,6,8]},
+  {n:'Bosnie-Herzégovine', r:'Europe', v:[6,5,9,6,6,9]},
+  {n:'Monténégro', r:'Europe', v:[7,6,9,7,7,8]},
+  {n:'Macédoine du Nord', r:'Europe', v:[7,6,9,7,6,9]},
+  {n:'Albanie', r:'Europe', v:[7,6,9,7,7,7]},
+  {n:'Kosovo', r:'Europe', v:[7,6,9,7,6,8]},
+  {n:'Roumanie', r:'Europe', v:[7,6,10,7,6,9]},
+  {n:'Bulgarie', r:'Europe', v:[7,7,10,7,7,9]},
+  {n:'Moldavie', r:'Europe', v:[7,5,9,6,5,8]},
+  {n:'Ukraine', r:'Europe', v:[5,4,9,1,5,8]},
+  {n:'Biélorussie', r:'Europe', v:[3,3,8,5,4,8]},
+  {n:'Russie', r:'Europe', v:[3,4,10,3,5,8]},
+  {n:'Géorgie', r:'Europe', v:[8,8,9,7,8,8]},
+  {n:'Arménie', r:'Europe', v:[7,7,10,7,6,8]},
+  {n:'Azerbaïdjan', r:'Europe', v:[4,5,9,6,5,6]},
+  {n:'Turquie', r:'Europe', v:[5,6,7,5,8,4]},
+  {n:'Japon', r:'Asie', v:[8,7,1,10,8,1]},
+  {n:'Corée du Sud', r:'Asie', v:[8,8,1,9,7,3]},
+  {n:'Taïwan', r:'Asie', v:[9,9,6,9,8,4]},
+  {n:'Chine', r:'Asie', v:[2,4,10,7,5,3]},
+  {n:'Hong Kong', r:'Asie', v:[5,9,10,8,7,8]},
+  {n:'Macao', r:'Asie', v:[5,7,10,9,6,8]},
+  {n:'Mongolie', r:'Asie', v:[7,6,9,6,4,8]},
+  {n:'Singapour', r:'Asie', v:[5,10,10,10,7,7]},
+  {n:'Malaisie', r:'Asie', v:[5,7,10,7,7,6]},
+  {n:'Thaïlande', r:'Asie', v:[6,6,8,5,10,5]},
+  {n:'Vietnam', r:'Asie', v:[4,6,8,7,8,5]},
+  {n:'Cambodge', r:'Asie', v:[4,5,9,5,7,7]},
+  {n:'Laos', r:'Asie', v:[3,4,9,6,6,6]},
+  {n:'Birmanie', r:'Asie', v:[2,2,8,1,5,5]},
+  {n:'Philippines', r:'Asie', v:[6,5,6,4,8,5]},
+  {n:'Indonésie', r:'Asie', v:[5,6,9,6,8,4]},
+  {n:'Brunei', r:'Asie', v:[3,6,10,9,4,10]},
+  {n:'Timor oriental', r:'Asie', v:[6,4,9,6,5,6]},
+  {n:'Inde', r:'Asie', v:[5,6,10,5,7,4]},
+  {n:'Pakistan', r:'Asie', v:[3,4,10,3,5,5]},
+  {n:'Bangladesh', r:'Asie', v:[4,4,8,4,4,5]},
+  {n:'Sri Lanka', r:'Asie', v:[6,5,10,6,7,5]},
+  {n:'Népal', r:'Asie', v:[6,4,9,6,6,5]},
+  {n:'Bhoutan', r:'Asie', v:[5,4,9,8,5,5]},
+  {n:'Maldives', r:'Asie', v:[5,5,10,7,8,7]},
+  {n:'Kazakhstan', r:'Asie', v:[5,6,10,6,5,9]},
+  {n:'Ouzbékistan', r:'Asie', v:[4,5,9,7,5,8]},
+  {n:'Kirghizistan', r:'Asie', v:[5,5,9,6,5,9]},
+  {n:'Tadjikistan', r:'Asie', v:[3,3,8,6,4,8]},
+  {n:'Turkménistan', r:'Asie', v:[1,2,8,6,3,8]},
+  {n:'Afghanistan', r:'Asie', v:[0,1,8,0,1,6]},
+  {n:'Corée du Nord', r:'Asie', v:[0,0,5,4,1,5]},
+  {n:'Émirats arabes unis', r:'Moyen-Orient', v:[4,9,10,10,7,10]},
+  {n:'Qatar', r:'Moyen-Orient', v:[4,8,10,10,6,10]},
+  {n:'Bahreïn', r:'Moyen-Orient', v:[4,8,10,8,6,10]},
+  {n:'Koweït', r:'Moyen-Orient', v:[4,6,10,8,5,10]},
+  {n:'Oman', r:'Moyen-Orient', v:[4,7,10,9,6,10]},
+  {n:'Arabie saoudite', r:'Moyen-Orient', v:[2,7,10,8,5,10]},
+  {n:'Israël', r:'Moyen-Orient', v:[7,7,10,5,8,2]},
+  {n:'Jordanie', r:'Moyen-Orient', v:[5,6,10,7,6,6]},
+  {n:'Liban', r:'Moyen-Orient', v:[6,4,6,4,8,5]},
+  {n:'Iran', r:'Moyen-Orient', v:[1,2,7,5,4,5]},
+  {n:'Irak', r:'Moyen-Orient', v:[3,3,8,2,4,7]},
+  {n:'Syrie', r:'Moyen-Orient', v:[1,1,6,0,2,7]},
+  {n:'Yémen', r:'Moyen-Orient', v:[1,1,8,0,1,6]},
+  {n:'Égypte', r:'Afrique', v:[3,4,10,6,6,5]},
+  {n:'Maroc', r:'Afrique', v:[5,6,10,7,8,4]},
+  {n:'Algérie', r:'Afrique', v:[3,3,7,6,5,4]},
+  {n:'Tunisie', r:'Afrique', v:[5,5,8,6,7,4]},
+  {n:'Libye', r:'Afrique', v:[2,2,8,1,3,8]},
+  {n:'Mauritanie', r:'Afrique', v:[3,4,8,5,3,6]},
+  {n:'Sénégal', r:'Afrique', v:[6,5,8,6,7,5]},
+  {n:"Côte d'Ivoire", r:'Afrique', v:[5,5,7,5,6,5]},
+  {n:'Ghana', r:'Afrique', v:[7,5,9,7,6,5]},
+  {n:'Nigeria', r:'Afrique', v:[4,4,9,2,4,6]},
+  {n:'Bénin', r:'Afrique', v:[6,5,8,6,5,5]},
+  {n:'Togo', r:'Afrique', v:[5,5,8,6,5,5]},
+  {n:'Burkina Faso', r:'Afrique', v:[4,4,8,1,3,6]},
+  {n:'Mali', r:'Afrique', v:[3,4,8,1,3,6]},
+  {n:'Niger', r:'Afrique', v:[3,3,8,2,2,6]},
+  {n:'Cap-Vert', r:'Afrique', v:[8,6,9,7,7,6]},
+  {n:'Gambie', r:'Afrique', v:[6,5,8,6,5,6]},
+  {n:'Guinée', r:'Afrique', v:[4,4,8,4,3,6]},
+  {n:'Guinée-Bissau', r:'Afrique', v:[5,3,8,5,4,6]},
+  {n:'Sierra Leone', r:'Afrique', v:[6,4,8,6,4,6]},
+  {n:'Libéria', r:'Afrique', v:[6,4,8,5,4,6]},
+  {n:'Cameroun', r:'Afrique', v:[3,4,6,3,4,5]},
+  {n:'Gabon', r:'Afrique', v:[5,5,8,6,5,5]},
+  {n:'Guinée équatoriale', r:'Afrique', v:[2,3,8,6,3,6]},
+  {n:'São Tomé-et-Principe', r:'Afrique', v:[7,4,8,7,5,6]},
+  {n:'Congo', r:'Afrique', v:[4,3,7,4,4,4]},
+  {n:'RD Congo', r:'Afrique', v:[3,2,7,1,3,5]},
+  {n:'Tchad', r:'Afrique', v:[2,2,8,2,2,5]},
+  {n:'Centrafrique', r:'Afrique', v:[2,1,8,0,2,5]},
+  {n:'Soudan', r:'Afrique', v:[1,1,8,0,1,6]},
+  {n:'Soudan du Sud', r:'Afrique', v:[1,1,8,0,1,6]},
+  {n:'Éthiopie', r:'Afrique', v:[3,3,9,2,4,6]},
+  {n:'Érythrée', r:'Afrique', v:[1,1,8,4,2,6]},
+  {n:'Djibouti', r:'Afrique', v:[4,4,8,6,4,5]},
+  {n:'Somalie', r:'Afrique', v:[1,1,8,0,1,7]},
+  {n:'Kenya', r:'Afrique', v:[6,6,10,5,7,5]},
+  {n:'Ouganda', r:'Afrique', v:[4,5,9,5,5,5]},
+  {n:'Tanzanie', r:'Afrique', v:[5,5,9,6,7,5]},
+  {n:'Rwanda', r:'Afrique', v:[4,7,9,8,5,5]},
+  {n:'Burundi', r:'Afrique', v:[2,2,8,4,3,5]},
+  {n:'Mozambique', r:'Afrique', v:[5,4,7,3,6,5]},
+  {n:'Madagascar', r:'Afrique', v:[5,4,7,5,6,6]},
+  {n:'Maurice', r:'Afrique', v:[8,8,10,8,8,7]},
+  {n:'Seychelles', r:'Afrique', v:[7,6,10,8,8,6]},
+  {n:'Comores', r:'Afrique', v:[5,3,8,6,5,5]},
+  {n:'Afrique du Sud', r:'Afrique', v:[7,6,3,2,7,3]},
+  {n:'Namibie', r:'Afrique', v:[8,6,9,5,7,4]},
+  {n:'Botswana', r:'Afrique', v:[7,7,7,6,6,6]},
+  {n:'Zimbabwe', r:'Afrique', v:[3,2,7,5,4,4]},
+  {n:'Zambie', r:'Afrique', v:[6,5,9,6,5,5]},
+  {n:'Malawi', r:'Afrique', v:[6,4,8,6,4,5]},
+  {n:'Angola', r:'Afrique', v:[4,3,8,5,5,5]},
+  {n:'Eswatini', r:'Afrique', v:[3,4,8,5,4,5]},
+  {n:'Lesotho', r:'Afrique', v:[6,4,8,5,4,5]},
+  {n:'Canada', r:'Amériques', v:[9,8,7,9,7,3]},
+  {n:'États-Unis', r:'Amériques', v:[8,8,6,5,8,4]},
+  {n:'Mexique', r:'Amériques', v:[6,6,10,3,9,5]},
+  {n:'Guatemala', r:'Amériques', v:[5,5,6,4,6,8]},
+  {n:'Belize', r:'Amériques', v:[7,5,10,5,7,6]},
+  {n:'Honduras', r:'Amériques', v:[5,5,8,3,6,6]},
+  {n:'Salvador', r:'Amériques', v:[4,6,10,6,6,6]},
+  {n:'Nicaragua', r:'Amériques', v:[2,3,9,5,5,6]},
+  {n:'Costa Rica', r:'Amériques', v:[9,6,10,6,9,8]},
+  {n:'Panama', r:'Amériques', v:[8,7,10,6,8,8]},
+  {n:'Cuba', r:'Amériques', v:[1,1,5,6,6,4]},
+  {n:'Jamaïque', r:'Amériques', v:[7,6,9,3,8,6]},
+  {n:'Haïti', r:'Amériques', v:[4,2,7,1,3,6]},
+  {n:'République dominicaine', r:'Amériques', v:[7,6,7,5,9,6]},
+  {n:'Bahamas', r:'Amériques', v:[7,7,10,6,8,10]},
+  {n:'Barbade', r:'Amériques', v:[8,6,10,7,8,4]},
+  {n:'Trinité-et-Tobago', r:'Amériques', v:[7,5,10,4,7,6]},
+  {n:'Colombie', r:'Amériques', v:[7,6,5,4,9,4]},
+  {n:'Venezuela', r:'Amériques', v:[3,1,2,2,5,5]},
+  {n:'Équateur', r:'Amériques', v:[6,5,3,4,7,5]},
+  {n:'Pérou', r:'Amériques', v:[7,6,10,5,8,5]},
+  {n:'Bolivie', r:'Amériques', v:[5,3,8,5,6,6]},
+  {n:'Chili', r:'Amériques', v:[8,8,3,6,8,4]},
+  {n:'Argentine', r:'Amériques', v:[8,4,8,6,9,5]},
+  {n:'Uruguay', r:'Amériques', v:[9,7,10,6,8,7]},
+  {n:'Paraguay', r:'Amériques', v:[7,6,10,5,6,10]},
+  {n:'Brésil', r:'Amériques', v:[6,5,5,3,9,4]},
+  {n:'Guyana', r:'Amériques', v:[7,5,10,5,5,6]},
+  {n:'Suriname', r:'Amériques', v:[7,4,8,6,5,5]},
+  {n:'Australie', r:'Océanie', v:[9,8,10,9,9,3]},
+  {n:'Nouvelle-Zélande', r:'Océanie', v:[9,9,10,9,8,5]},
+  {n:'Fidji', r:'Océanie', v:[6,5,10,6,8,6]},
+  {n:'Papouasie-Nouvelle-Guinée', r:'Océanie', v:[6,4,9,3,4,5]},
+  {n:'Vanuatu', r:'Océanie', v:[8,5,10,7,7,10]},
+  {n:'Samoa', r:'Océanie', v:[7,5,10,7,6,6]}
 ];
 
 
@@ -284,6 +468,34 @@ function hexSVG(c, nd){
   return `<svg class="hex" viewBox="-70 0 480 335" role="img" aria-label="Hexagone de correspondance ${esc(c.n)}">${g}</svg>`;
 }
 
+/* ====== Analyse ====== */
+const ord = n => n===1 ? '1er' : n+'e';
+function analysisHTML(c, answers, nd, weak, name){
+  const all = ranked(answers, 'Tous'), N = all.length;
+  const pos = all.findIndex(x=>x.n===c.n)+1;
+  let txt = `${c.n} arrive ${ord(pos)} sur ${N} pays pour ${name}. `;
+  let alt = null;
+  if(weak.length){
+    const wi = weak[0].i;
+    txt += `Son point le plus faible pour toi : ${AXES[wi].label.toLowerCase()} (${c.v[wi]}/10). `;
+    alt = all.filter(x=>x.n!==c.n && x.s>=c.s-8 && x.v[wi]>c.v[wi]).sort((a,b)=>b.v[wi]-a.v[wi]||b.s-a.s)[0];
+    if(alt) txt += `Si ce critère pèse lourd, ${alt.n} fait mieux (${alt.v[wi]}/10) pour un score proche (${alt.s} %).`;
+  } else txt += 'Il remplit toutes tes exigences.';
+  const ranks = AXES.map((a,i)=>{ if(!nd[i]||!nd[i].w) return '';
+    const r = 1 + COUNTRIES.filter(x=>x.v[i]>c.v[i]).length;
+    return `<li><span>${a.label}</span><b>${ord(r)} sur ${N}</b></li>`; }).join('');
+  return `<div class="analysis"><h3>Analyse</h3><p>${txt}</p>${ranks?`<ul class="axisrank">${ranks}</ul>`:''}</div>`;
+}
+const METHOD = `<p>Chaque note de 0 à 10 est une estimation établie par Claude à partir d’indices publics, tels qu’ils étaient connus mi-2026. Ce ne sont pas les chiffres officiels : ils peuvent être approximatifs ou en retard sur l’actualité, à vérifier avant toute décision.</p>
+<ul>
+<li><b>Liberté individuelle</b> : Human Freedom Index (volet liberté personnelle, Cato et Fraser Institute) et Freedom House.</li>
+<li><b>Liberté d’entreprendre</b> : Economic Freedom of the World (Fraser Institute) et Index of Economic Freedom (Heritage Foundation).</li>
+<li><b>Succession</b> : existence et taux des droits de succession en ligne directe (guide mondial d’EY). 10 = aucun droit pour les enfants.</li>
+<li><b>Sécurité</b> : Global Peace Index, taux d’homicides de l’ONUDC et conflits en cours.</li>
+<li><b>Art de vivre</b> : World Happiness Report, complété par le climat, la gastronomie et la vie sociale. C’est l’axe le plus subjectif.</li>
+<li><b>Impôts</b> : taux marginal maximal de l’impôt sur le revenu (tableaux KPMG et PwC). 0 % = 10, 55 % = 1, avec un bonus pour les fiscalités territoriales.</li>
+</ul>`;
+
 /* ====== Écrans ====== */
 function renderHome(){
   const names = Object.keys(store.profiles).sort((a,b)=>store.profiles[b].date.localeCompare(store.profiles[a].date));
@@ -346,7 +558,7 @@ function renderResult(){
     if(!o.w) return;
     const gap = o.req - c.v[i];
     if(gap<=0) good.push(`${a.label} <small>(${c.v[i]}/10)</small>`);
-    else weak.push({t:`${a.label} <small>(${c.v[i]}/10, attendu ${num(o.req)})</small>`, k:gap*o.w});
+    else weak.push({t:`${a.label} <small>(${c.v[i]}/10, attendu ${num(o.req)})</small>`, k:gap*o.w, i});
   });
   weak.sort((x,y)=>y.k-x.k);
   const regions = ['Tous', ...new Set(COUNTRIES.map(c=>c.r))];
@@ -368,7 +580,12 @@ function renderResult(){
       <div class="weak"><h3>Faiblesses</h3>${weak.length?`<ul>${weak.map(w=>`<li>${w.t}</li>`).join('')}</ul>`:'<p class="note">Rien ne coince.</p>'}</div>
     </div>
     ${unknown.length?`<p class="note">Pas encore renseigné : ${unknown.join(', ')}. Ces critères ne comptent pas dans le score.</p>`:''}
-    <p class="note">Enregistré sur cet appareil le ${fmtDate(p.date)}. Scores pays indicatifs (0 à 10). Le pourcentage mesure à quel point le pays atteint tes exigences, pondérées par leur importance.</p>
+    ${analysisHTML(c, answers, nd, weak, name)}
+    <details class="more"><summary>Classement complet (${list.length} pays)</summary>
+      <ol class="full">${list.map((x,i)=>`<li><button class="fullrow" data-i="${i}" aria-pressed="${i===selected}"><span>${x.n}</span><b>${x.s} %</b></button></li>`).join('')}</ol>
+    </details>
+    <details class="more"><summary>Sur quoi reposent les notes ?</summary>${METHOD}</details>
+    <p class="note">Enregistré sur cet appareil le ${fmtDate(p.date)}. Le pourcentage mesure à quel point le pays atteint tes exigences, pondérées par leur importance.</p>
     <div class="actions">
       <button class="cta" data-act="redo">Refaire le QCM</button>
       <button class="cta secondary" data-act="home">Autre profil</button>

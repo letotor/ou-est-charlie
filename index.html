@@ -69,17 +69,29 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .good h3{color:var(--good)} .weak h3{color:var(--bad)}
 .note{font-size:.82rem;color:var(--muted);margin-top:16px}
 .cta{display:block;width:100%;margin-top:18px;border:0;background:var(--ink);color:var(--bg);border-radius:14px;padding:14px;font-weight:600}
+.field label{display:block;font-weight:600;margin-bottom:6px}
+.field input{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.err{color:var(--bad);font-size:.88rem;margin:6px 0 0;min-height:1.2em}
+.saved{margin-top:22px}
+.saved h2{font-size:1.15rem;margin:0 0 10px}
+.row{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.row .info{flex:1;min-width:0}
+.row .info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .info small{color:var(--muted)}
+.btn{border:1.5px solid var(--line);background:transparent;border-radius:10px;padding:7px 12px;font-size:.88rem}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.danger{color:var(--bad)}
+.actions{display:flex;gap:10px;margin-top:18px}
+.actions .cta{margin-top:0}
+.cta.secondary{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <main class="wrap">
   <h1>Quel pays te correspond ?</h1>
-  <p class="lead">Six questions sur ce qui compte vraiment pour toi. Le résultat compare tes exigences au profil de chaque pays.</p>
-  <div class="tabs" role="group" aria-label="Profil">
-    <button class="chip" data-view="charlie">Profil de Charlie</button>
-    <button class="chip" data-view="quiz">Faire le QCM</button>
-  </div>
+  <p class="lead">Six questions sur ce qui compte vraiment pour toi. Ton résultat reste enregistré sur ton appareil, tu peux le revoir quand tu veux.</p>
   <section id="app"></section>
 </main>
 
@@ -141,54 +153,108 @@ const COUNTRIES = [
   {n:'Costa Rica',       r:'Amérique', v:[8,5,10,5,9,7]}
 ];
 
-// Réponses de Charlie (index d'option, null = pas encore répondu)
-const PROFILES = { charlie: {name:'Charlie', partial:true, answers:[0,0,0,0,1,null]} };
 
-/* ====== Logique ====== */
-const app = document.getElementById('app');
-let view = 'charlie', qi = 0, myAnswers = QUESTIONS.map(()=>undefined), selected = 0, region = 'Tous';
-
-function needs(answers){
-  return AXES.map((a,i)=>{ const x = answers[i]; if(x==null) return null; return QUESTIONS[i].opts[x]; });
+/* ====== Stockage local ====== */
+const KEY = 'qcm-pays:v1';
+function loadStore(){
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d && d.profiles) return d; }catch(e){}
+  return {profiles:{}, last:null};
 }
+function saveStore(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+let store = loadStore();
+
+/* ====== État ====== */
+const app = document.getElementById('app');
+let current = store.last && store.profiles[store.last] ? store.last : null;
+let view = current ? 'result' : 'home';
+let qi = 0, draft = [], selected = 0, region = 'Tous', draftName = '';
+
+const esc = t => String(t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = iso => { try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(e){ return ''; } };
+
+/* ====== Calcul ====== */
+function needs(answers){ return AXES.map((a,i)=>{ const x = answers[i]; return x==null ? null : QUESTIONS[i].opts[x]; }); }
 function score(c, nd){
   let pen=0, den=0;
   nd.forEach((o,i)=>{ if(!o||!o.w) return; den += o.w*o.req; pen += o.w*Math.max(0,o.req-c.v[i]); });
   return den ? Math.round(100 - pen/den*100) : 0;
 }
-function ranked(answers){
+function ranked(answers, reg){
   const nd = needs(answers);
-  return COUNTRIES.filter(c=>region==='Tous'||c.r===region)
-    .map(c=>({...c, s:score(c,nd)})).sort((a,b)=>b.s-a.s);
+  return COUNTRIES.filter(c=>reg==='Tous'||c.r===reg).map(c=>({...c, s:score(c,nd)})).sort((a,b)=>b.s-a.s);
 }
 
-function pt(i, val, R=110, cx=170, cy=160){
-  const ang = -Math.PI/2 + i*Math.PI*2/6, r = R*val/10;
-  return [cx + r*Math.cos(ang), cy + r*Math.sin(ang)];
-}
+/* ====== Hexagone ====== */
+function pt(i, val, R=110, cx=170, cy=160){ const ang=-Math.PI/2+i*Math.PI*2/6, r=R*val/10; return [cx+r*Math.cos(ang), cy+r*Math.sin(ang)]; }
 function poly(vals){ return vals.map((v,i)=>pt(i,v).join(',')).join(' '); }
-
 function hexSVG(c, nd){
-  let g = '';
-  [2.5,5,7.5,10].forEach(l=> g += `<polygon points="${poly([l,l,l,l,l,l])}" fill="none" stroke="var(--line)" stroke-width="1"/>`);
-  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10); g += `<line x1="170" y1="160" x2="${x}" y2="${y}" stroke="var(--line)"/>`; });
-  const want = nd.map(o=>o?o.req:0);
-  g += `<polygon points="${poly(want)}" fill="none" stroke="var(--want)" stroke-width="2.5" stroke-dasharray="6 5"/>`;
-  g += `<polygon points="${poly(c.v)}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5"/>`;
-  c.v.forEach((v,i)=>{ const [x,y]=pt(i,v); const miss = nd[i] && nd[i].w && v < nd[i].req;
-    g += `<circle cx="${x}" cy="${y}" r="4.5" fill="${miss?'var(--bad)':'var(--accent)'}"/>`; });
-  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10,138); const anchor = Math.abs(x-170)<5?'middle':(x>170?'start':'end');
-    const off = nd[i]? '' : ' (?)';
-    g += `<text x="${x}" y="${y+4}" text-anchor="${anchor}" font-size="12.5" font-weight="600" fill="${nd[i]?'var(--ink)':'var(--muted)'}">${a.short}${off}</text>`;
-    g += `<text x="${x}" y="${y+19}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">${c.v[i]}/10</text>`; });
-  return `<svg class="hex" viewBox="0 0 340 330" role="img" aria-label="Hexagone de correspondance ${c.n}">${g}</svg>`;
+  let g='';
+  [2.5,5,7.5,10].forEach(l=> g+=`<polygon points="${poly([l,l,l,l,l,l])}" fill="none" stroke="var(--line)"/>`);
+  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10); g+=`<line x1="170" y1="160" x2="${x}" y2="${y}" stroke="var(--line)"/>`; });
+  g+=`<polygon points="${poly(nd.map(o=>o?o.req:0))}" fill="none" stroke="var(--want)" stroke-width="2.5" stroke-dasharray="6 5"/>`;
+  g+=`<polygon points="${poly(c.v)}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5"/>`;
+  c.v.forEach((v,i)=>{ const [x,y]=pt(i,v); const miss=nd[i]&&nd[i].w&&v<nd[i].req; g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${miss?'var(--bad)':'var(--accent)'}"/>`; });
+  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10,138); const an=Math.abs(x-170)<5?'middle':(x>170?'start':'end');
+    g+=`<text x="${x}" y="${y+4}" text-anchor="${an}" font-size="12.5" font-weight="600" fill="${nd[i]?'var(--ink)':'var(--muted)'}">${a.short}${nd[i]?'':' (?)'}</text>`;
+    g+=`<text x="${x}" y="${y+19}" text-anchor="${an}" font-size="11" fill="var(--muted)">${c.v[i]}/10</text>`; });
+  return `<svg class="hex" viewBox="0 0 340 330" role="img" aria-label="Hexagone de correspondance ${esc(c.n)}">${g}</svg>`;
 }
 
-function renderResult(name, answers, partial){
-  const list = ranked(answers), nd = needs(answers);
+/* ====== Écrans ====== */
+function renderHome(){
+  const names = Object.keys(store.profiles).sort((a,b)=>store.profiles[b].date.localeCompare(store.profiles[a].date));
+  app.innerHTML = `
+  <div class="panel">
+    <div class="field">
+      <label for="name">Ton prénom</label>
+      <input id="name" autocomplete="given-name" maxlength="40" value="${esc(draftName)}" placeholder="Par exemple Charlie">
+      <p class="err" id="err" aria-live="polite"></p>
+    </div>
+    <button class="cta" data-act="start" style="margin-top:6px">Commencer le QCM</button>
+    ${names.length ? `<div class="saved"><h2>Profils enregistrés sur cet appareil</h2>
+      ${names.map((n,i)=>{ const p=store.profiles[n], top=ranked(p.answers,'Tous')[0];
+        return `<div class="row"><div class="info"><b>${esc(n)}</b><small>${top?esc(top.n)+' à '+top.s+'%':''}, le ${fmtDate(p.date)}</small></div>
+        <button class="btn primary" data-see="${i}">Voir</button><button class="btn danger" data-del="${i}" aria-label="Supprimer le profil ${esc(n)}">Supprimer</button></div>`; }).join('')}
+    </div>` : ''}
+  </div>`;
+  app._names = names;
+  const input = document.getElementById('name');
+  input.addEventListener('input', e=>{ draftName = e.target.value; });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') startQuiz(); });
+}
+
+function startQuiz(){
+  const n = draftName.trim();
+  if(!n){ const e=document.getElementById('err'); if(e) e.textContent='Entre ton prénom pour commencer.'; return; }
+  current = n; draft = QUESTIONS.map(()=>undefined); qi = 0; view = 'quiz'; render();
+}
+
+function renderQuiz(){
+  if(qi >= QUESTIONS.length){
+    store.profiles[current] = {answers: draft.map(a=>a===undefined?null:a), date: new Date().toISOString()};
+    store.last = current; saveStore(); view='result'; selected=0; return render();
+  }
+  const Q = QUESTIONS[qi], ax = AXES.find(a=>a.id===Q.axis);
+  app.innerHTML = `
+  <div class="panel">
+    <div class="progress"><i style="width:${qi/QUESTIONS.length*100}%"></i></div>
+    <p class="qtheme">Question ${qi+1} sur ${QUESTIONS.length} : ${ax.label}</p>
+    <p class="qtext">${Q.q}</p>
+    ${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${draft[qi]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}
+    <div class="nav">
+      <button class="link" data-nav="back">${qi===0?'Annuler':'Question précédente'}</button>
+      <button class="link" data-nav="skip">Passer</button>
+    </div>
+  </div>`;
+}
+
+function renderResult(){
+  const p = store.profiles[current];
+  if(!p){ view='home'; return render(); }
+  const answers = p.answers, partial = answers.some(a=>a==null);
+  const list = ranked(answers, region), nd = needs(answers);
   if(selected >= list.length) selected = 0;
-  const c = list[selected];
-  const good=[], weak=[], unknown=[];
+  const c = list[selected], good=[], weak=[], unknown=[];
   AXES.forEach((a,i)=>{
     const o = nd[i];
     if(!o){ unknown.push(a.label); return; }
@@ -199,6 +265,7 @@ function renderResult(name, answers, partial){
   });
   weak.sort((x,y)=>y.k-x.k);
   const regions = ['Tous', ...new Set(COUNTRIES.map(c=>c.r))];
+  const name = esc(current);
   app.innerHTML = `
   <div class="panel">
     <div class="who"><h2>${name}</h2>${partial?'<span class="badge">Réponses partielles</span>':''}</div>
@@ -216,44 +283,35 @@ function renderResult(name, answers, partial){
       <div class="weak"><h3>Faiblesses</h3>${weak.length?`<ul>${weak.map(w=>`<li>${w.t}</li>`).join('')}</ul>`:'<p class="note">Rien ne coince.</p>'}</div>
     </div>
     ${unknown.length?`<p class="note">Pas encore renseigné : ${unknown.join(', ')}. Ces critères ne comptent pas dans le score.</p>`:''}
-    <p class="note">Scores pays indicatifs (0 à 10), à affiner. Le pourcentage mesure à quel point le pays atteint les exigences, pondérées par leur importance.</p>
-    ${view==='charlie'?'<button class="cta" data-go="quiz">Faire le QCM moi-même</button>':'<button class="cta" data-go="restart">Recommencer le QCM</button>'}
-  </div>`;
-}
-
-function renderQuiz(){
-  if(qi >= QUESTIONS.length){ view='mine'; selected=0; return render(); }
-  const Q = QUESTIONS[qi], ax = AXES.find(a=>a.id===Q.axis);
-  app.innerHTML = `
-  <div class="panel">
-    <div class="progress"><i style="width:${qi/QUESTIONS.length*100}%"></i></div>
-    <p class="qtheme">Question ${qi+1} sur ${QUESTIONS.length} : ${ax.label}</p>
-    <p class="qtext">${Q.q}</p>
-    ${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${myAnswers[qi]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}
-    <div class="nav">
-      <button class="link" data-nav="back" ${qi===0?'disabled style="visibility:hidden"':''}>Question précédente</button>
-      <button class="link" data-nav="skip">Passer</button>
+    <p class="note">Enregistré sur cet appareil le ${fmtDate(p.date)}. Scores pays indicatifs (0 à 10). Le pourcentage mesure à quel point le pays atteint tes exigences, pondérées par leur importance.</p>
+    <div class="actions">
+      <button class="cta" data-act="redo">Refaire le QCM</button>
+      <button class="cta secondary" data-act="home">Autre profil</button>
     </div>
   </div>`;
 }
 
 function render(){
-  document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view===view || (view==='mine'&&b.dataset.view==='quiz')));
-  if(view==='charlie') renderResult('Charlie', PROFILES.charlie.answers, true);
+  if(view==='home') renderHome();
   else if(view==='quiz') renderQuiz();
-  else renderResult('Toi', myAnswers.map(a=>a===undefined?null:a), myAnswers.some(a=>a==null));
+  else renderResult();
+  window.scrollTo({top:0});
 }
 
 document.addEventListener('click', e=>{
   const t = e.target.closest('button'); if(!t) return;
-  if(t.dataset.view){ view = t.dataset.view; selected=0; if(view==='quiz' && myAnswers.every(a=>a!==undefined)) view='mine'; render(); }
-  else if(t.dataset.o!=null){ myAnswers[qi]=+t.dataset.o; qi++; render(); }
-  else if(t.dataset.nav==='skip'){ myAnswers[qi]=null; qi++; render(); }
-  else if(t.dataset.nav==='back'){ qi=Math.max(0,qi-1); render(); }
-  else if(t.dataset.i!=null){ selected=+t.dataset.i; render(); }
-  else if(t.dataset.region){ region=t.dataset.region; selected=0; render(); }
-  else if(t.dataset.go==='quiz'){ view='quiz'; qi=0; myAnswers=QUESTIONS.map(()=>undefined); render(); }
-  else if(t.dataset.go==='restart'){ view='quiz'; qi=0; myAnswers=QUESTIONS.map(()=>undefined); render(); }
+  const d = t.dataset;
+  if(d.act==='start') startQuiz();
+  else if(d.act==='redo'){ draftName = current; startQuiz(); }
+  else if(d.act==='home'){ draftName=''; view='home'; render(); }
+  else if(d.see!=null){ current = app._names[+d.see]; store.last=current; saveStore(); selected=0; region='Tous'; view='result'; render(); }
+  else if(d.del!=null){ const n = app._names[+d.del];
+    if(confirm(`Supprimer le profil de ${n} ?`)){ delete store.profiles[n]; if(store.last===n) store.last=null; saveStore(); render(); } }
+  else if(d.o!=null){ draft[qi]=+d.o; qi++; render(); }
+  else if(d.nav==='skip'){ draft[qi]=null; qi++; render(); }
+  else if(d.nav==='back'){ if(qi===0){ view = store.profiles[current]?'result':'home'; } else qi--; render(); }
+  else if(d.i!=null){ selected=+d.i; render(); }
+  else if(d.region){ region=d.region; selected=0; render(); }
 });
 render();
 </script>

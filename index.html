@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quel pays te correspond ?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --ink:#13233A; --muted:#5B6B7F; --line:#D5DDE5;
+  --accent:#0F7F82; --accent-soft:#D6EEEE; --want:#D39A00; --bad:#B8403A; --good:#1E8A52;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1622; --surface:#172233; --ink:#E6ECF2; --muted:#93A3B6; --line:#2A3A50;
+    --accent:#3CC2C4; --accent-soft:#163A44; --want:#F0B82C; --bad:#E0716A; --good:#5BC98C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1622; --surface:#172233; --ink:#E6ECF2; --muted:#93A3B6; --line:#2A3A50;
+  --accent:#3CC2C4; --accent-soft:#163A44; --want:#F0B82C; --bad:#E0716A; --good:#5BC98C;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Instrument Sans",system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:20px 18px 40px}
+h1,h2,.display{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif}
+h1{font-size:2rem;line-height:1.1;font-weight:800;margin:8px 0 6px;letter-spacing:-.02em}
+.lead{color:var(--muted);margin:0 0 20px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 14px;border-radius:999px;font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+/* Quiz */
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.qtheme{color:var(--accent);font-weight:600;font-size:.9rem;margin:0}
+.qtext{font-family:"Bricolage Grotesque",sans-serif;font-size:1.4rem;line-height:1.25;font-weight:700;margin:4px 0 16px}
+.opt{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:transparent;border-radius:14px;padding:13px 15px;margin-bottom:10px}
+.opt:hover{border-color:var(--accent)}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+.nav{display:flex;justify-content:space-between;margin-top:8px}
+.link{background:none;border:0;color:var(--muted);padding:8px 0;text-decoration:underline}
+/* Results */
+.who{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
+.who h2{margin:0;font-size:1.5rem}
+.badge{font-size:.8rem;color:var(--want);border:1px solid var(--want);border-radius:999px;padding:2px 10px;white-space:nowrap}
+.ranking{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;margin:10px 0 4px}
+.rank{flex:0 0 auto;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:8px 12px;text-align:left;min-width:108px}
+.rank b{display:block;font-size:.95rem}
+.rank span{font-family:"Bricolage Grotesque",sans-serif;font-size:1.3rem;font-weight:800;color:var(--accent)}
+.rank[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.hex{display:block;width:100%;height:auto;max-width:420px;margin:0 auto}
+.legend{display:flex;gap:16px;justify-content:center;font-size:.85rem;color:var(--muted);margin:4px 0 14px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.score{text-align:center;margin:0 0 6px}
+.score .display{font-size:3rem;font-weight:800;line-height:1;color:var(--accent)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+@media (max-width:420px){.cols{grid-template-columns:1fr}}
+.cols h3{font-size:1rem;margin:0 0 6px}
+.cols ul{margin:0;padding-left:18px;font-size:.92rem}
+.cols li{margin-bottom:4px}
+.good h3{color:var(--good)} .weak h3{color:var(--bad)}
+.note{font-size:.82rem;color:var(--muted);margin-top:16px}
+.cta{display:block;width:100%;margin-top:18px;border:0;background:var(--ink);color:var(--bg);border-radius:14px;padding:14px;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Quel pays te correspond ?</h1>
+  <p class="lead">Six questions sur ce qui compte vraiment pour toi. Le résultat compare tes exigences au profil de chaque pays.</p>
+  <div class="tabs" role="group" aria-label="Profil">
+    <button class="chip" data-view="charlie">Profil de Charlie</button>
+    <button class="chip" data-view="quiz">Faire le QCM</button>
+  </div>
+  <section id="app"></section>
+</main>
+
+<script>
+/* ====== CONFIG : axes, questions, pays (modifiable) ====== */
+const AXES = [
+  {id:'lib', label:'Liberté individuelle', short:'Liberté'},
+  {id:'ent', label:'Liberté d’entreprendre', short:'Entreprendre'},
+  {id:'suc', label:'Pas de droits de succession', short:'Succession'},
+  {id:'sec', label:'Sécurité pour la famille', short:'Sécurité'},
+  {id:'viv', label:'Art de vivre, kiffer', short:'Kiffer'},
+  {id:'fis', label:'Impôts légers', short:'Impôts'}
+];
+
+// req = niveau exigé (0-10), w = poids (importance)
+const QUESTIONS = [
+  {axis:'lib', q:'Si un pays interdit ou encadre beaucoup de choses du quotidien (alcool, tabac, tenue, amendes pour des détails), tu réagis comment ?', opts:[
+    {t:'Je refuse d’y vivre', s:'La liberté passe avant tout', req:10, w:3},
+    {t:'Je m’adapte, mais ça me gêne', req:7, w:2},
+    {t:'Ça ne me dérange pas', req:4, w:1}]},
+  {axis:'ent', q:'Tu veux créer ton entreprise dans ce pays. Qu’est-ce que tu attends ?', opts:[
+    {t:'Que ce soit simple et rapide', req:9, w:2},
+    {t:'J’accepte quelques démarches', req:6, w:1},
+    {t:'Je ne compte pas entreprendre', req:3, w:0.5}]},
+  {axis:'suc', q:'Tes enfants hériteront de ton patrimoine. Les droits de succession, tu en penses quoi ?', opts:[
+    {t:'Il ne doit y en avoir aucun', req:10, w:2},
+    {t:'Un impôt modéré, ça va', req:6, w:1},
+    {t:'Ça ne compte pas pour moi', req:0, w:0}]},
+  {axis:'sec', q:'La sécurité pour ta femme et tes enfants, c’est quel niveau de priorité ?', opts:[
+    {t:'Indispensable', s:'Rues sûres, bonnes écoles, bons hôpitaux', req:10, w:3},
+    {t:'Important', req:7, w:2},
+    {t:'Secondaire', req:4, w:1}]},
+  {axis:'viv', q:'Profiter de la vie sur place (climat, cuisine, sorties), c’est quel niveau de priorité ?', opts:[
+    {t:'La raison principale de partir', req:10, w:2.5},
+    {t:'Très important', req:8, w:1.5},
+    {t:'Un bonus', req:5, w:0.5}]},
+  {axis:'fis', q:'Combien d’impôts sur tes revenus es-tu prêt à payer ?', opts:[
+    {t:'Le moins possible', req:10, w:2},
+    {t:'Un niveau raisonnable', req:6, w:1},
+    {t:'Beaucoup, si les services publics suivent', req:3, w:0.5}]}
+];
+
+// Scores indicatifs 0-10 : [lib, ent, suc, sec, viv, fis]
+const COUNTRIES = [
+  {n:'Nouvelle-Zélande', r:'Océanie', v:[9,8,10,9,8,5]},
+  {n:'Suisse',           r:'Europe',  v:[8,8,8,10,7,6]},
+  {n:'Portugal',         r:'Europe',  v:[8,5,9,8,9,4]},
+  {n:'Géorgie',          r:'Europe',  v:[8,8,9,7,7,9]},
+  {n:'Émirats arabes unis', r:'Moyen-Orient', v:[4,9,10,10,6,10]},
+  {n:'Singapour',        r:'Asie',    v:[3,10,10,10,6,8]},
+  {n:'Hong Kong',        r:'Asie',    v:[4,9,10,8,6,9]},
+  {n:'Japon',            r:'Asie',    v:[6,5,1,10,8,4]},
+  {n:'Thaïlande',        r:'Asie',    v:[6,5,8,5,9,7]},
+  {n:'Malaisie',         r:'Asie',    v:[4,6,10,6,7,7]},
+  {n:'Philippines',      r:'Asie',    v:[5,4,6,3,7,6]},
+  {n:'États-Unis',       r:'Amérique', v:[8,9,6,5,7,5]},
+  {n:'Panama',           r:'Amérique', v:[7,7,10,6,8,8]},
+  {n:'Uruguay',          r:'Amérique', v:[8,6,10,6,7,6]},
+  {n:'Costa Rica',       r:'Amérique', v:[8,5,10,5,9,7]}
+];
+
+// Réponses de Charlie (index d'option, null = pas encore répondu)
+const PROFILES = { charlie: {name:'Charlie', partial:true, answers:[0,0,0,0,1,null]} };
+
+/* ====== Logique ====== */
+const app = document.getElementById('app');
+let view = 'charlie', qi = 0, myAnswers = QUESTIONS.map(()=>undefined), selected = 0, region = 'Tous';
+
+function needs(answers){
+  return AXES.map((a,i)=>{ const x = answers[i]; if(x==null) return null; return QUESTIONS[i].opts[x]; });
+}
+function score(c, nd){
+  let pen=0, den=0;
+  nd.forEach((o,i)=>{ if(!o||!o.w) return; den += o.w*o.req; pen += o.w*Math.max(0,o.req-c.v[i]); });
+  return den ? Math.round(100 - pen/den*100) : 0;
+}
+function ranked(answers){
+  const nd = needs(answers);
+  return COUNTRIES.filter(c=>region==='Tous'||c.r===region)
+    .map(c=>({...c, s:score(c,nd)})).sort((a,b)=>b.s-a.s);
+}
+
+function pt(i, val, R=110, cx=170, cy=160){
+  const ang = -Math.PI/2 + i*Math.PI*2/6, r = R*val/10;
+  return [cx + r*Math.cos(ang), cy + r*Math.sin(ang)];
+}
+function poly(vals){ return vals.map((v,i)=>pt(i,v).join(',')).join(' '); }
+
+function hexSVG(c, nd){
+  let g = '';
+  [2.5,5,7.5,10].forEach(l=> g += `<polygon points="${poly([l,l,l,l,l,l])}" fill="none" stroke="var(--line)" stroke-width="1"/>`);
+  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10); g += `<line x1="170" y1="160" x2="${x}" y2="${y}" stroke="var(--line)"/>`; });
+  const want = nd.map(o=>o?o.req:0);
+  g += `<polygon points="${poly(want)}" fill="none" stroke="var(--want)" stroke-width="2.5" stroke-dasharray="6 5"/>`;
+  g += `<polygon points="${poly(c.v)}" fill="var(--accent)" fill-opacity=".22" stroke="var(--accent)" stroke-width="2.5"/>`;
+  c.v.forEach((v,i)=>{ const [x,y]=pt(i,v); const miss = nd[i] && nd[i].w && v < nd[i].req;
+    g += `<circle cx="${x}" cy="${y}" r="4.5" fill="${miss?'var(--bad)':'var(--accent)'}"/>`; });
+  AXES.forEach((a,i)=>{ const [x,y]=pt(i,10,138); const anchor = Math.abs(x-170)<5?'middle':(x>170?'start':'end');
+    const off = nd[i]? '' : ' (?)';
+    g += `<text x="${x}" y="${y+4}" text-anchor="${anchor}" font-size="12.5" font-weight="600" fill="${nd[i]?'var(--ink)':'var(--muted)'}">${a.short}${off}</text>`;
+    g += `<text x="${x}" y="${y+19}" text-anchor="${anchor}" font-size="11" fill="var(--muted)">${c.v[i]}/10</text>`; });
+  return `<svg class="hex" viewBox="0 0 340 330" role="img" aria-label="Hexagone de correspondance ${c.n}">${g}</svg>`;
+}
+
+function renderResult(name, answers, partial){
+  const list = ranked(answers), nd = needs(answers);
+  if(selected >= list.length) selected = 0;
+  const c = list[selected];
+  const good=[], weak=[], unknown=[];
+  AXES.forEach((a,i)=>{
+    const o = nd[i];
+    if(!o){ unknown.push(a.label); return; }
+    if(!o.w) return;
+    const gap = o.req - c.v[i];
+    if(gap<=0) good.push(`${a.label} <small>(${c.v[i]}/10)</small>`);
+    else weak.push({t:`${a.label} <small>(${c.v[i]}/10, attendu ${o.req})</small>`, k:gap*o.w});
+  });
+  weak.sort((x,y)=>y.k-x.k);
+  const regions = ['Tous', ...new Set(COUNTRIES.map(c=>c.r))];
+  app.innerHTML = `
+  <div class="panel">
+    <div class="who"><h2>${name}</h2>${partial?'<span class="badge">Réponses partielles</span>':''}</div>
+    <div class="tabs" role="group" aria-label="Région" style="margin:10px 0 0">
+      ${regions.map(r=>`<button class="chip" data-region="${r}" aria-pressed="${r===region}">${r}</button>`).join('')}
+    </div>
+    <div class="ranking">
+      ${list.slice(0,6).map((x,i)=>`<button class="rank" data-i="${i}" aria-pressed="${i===selected}"><b>${x.n}</b><span>${x.s}%</span></button>`).join('')}
+    </div>
+    <p class="score"><span class="display">${c.s}%</span><br><span style="color:var(--muted)">${c.n}</span></p>
+    ${hexSVG(c, nd)}
+    <div class="legend"><span><i style="background:var(--accent)"></i>${c.n}</span><span><i style="background:var(--want)"></i>Exigences de ${name}</span></div>
+    <div class="cols">
+      <div class="good"><h3>Forces</h3>${good.length?`<ul>${good.map(g=>`<li>${g}</li>`).join('')}</ul>`:'<p class="note">Aucune exigence pleinement remplie.</p>'}</div>
+      <div class="weak"><h3>Faiblesses</h3>${weak.length?`<ul>${weak.map(w=>`<li>${w.t}</li>`).join('')}</ul>`:'<p class="note">Rien ne coince.</p>'}</div>
+    </div>
+    ${unknown.length?`<p class="note">Pas encore renseigné : ${unknown.join(', ')}. Ces critères ne comptent pas dans le score.</p>`:''}
+    <p class="note">Scores pays indicatifs (0 à 10), à affiner. Le pourcentage mesure à quel point le pays atteint les exigences, pondérées par leur importance.</p>
+    ${view==='charlie'?'<button class="cta" data-go="quiz">Faire le QCM moi-même</button>':'<button class="cta" data-go="restart">Recommencer le QCM</button>'}
+  </div>`;
+}
+
+function renderQuiz(){
+  if(qi >= QUESTIONS.length){ view='mine'; selected=0; return render(); }
+  const Q = QUESTIONS[qi], ax = AXES.find(a=>a.id===Q.axis);
+  app.innerHTML = `
+  <div class="panel">
+    <div class="progress"><i style="width:${qi/QUESTIONS.length*100}%"></i></div>
+    <p class="qtheme">Question ${qi+1} sur ${QUESTIONS.length} : ${ax.label}</p>
+    <p class="qtext">${Q.q}</p>
+    ${Q.opts.map((o,i)=>`<button class="opt" data-o="${i}" aria-pressed="${myAnswers[qi]===i}">${o.t}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}
+    <div class="nav">
+      <button class="link" data-nav="back" ${qi===0?'disabled style="visibility:hidden"':''}>Question précédente</button>
+      <button class="link" data-nav="skip">Passer</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view===view || (view==='mine'&&b.dataset.view==='quiz')));
+  if(view==='charlie') renderResult('Charlie', PROFILES.charlie.answers, true);
+  else if(view==='quiz') renderQuiz();
+  else renderResult('Toi', myAnswers.map(a=>a===undefined?null:a), myAnswers.some(a=>a==null));
+}
+
+document.addEventListener('click', e=>{
+  const t = e.target.closest('button'); if(!t) return;
+  if(t.dataset.view){ view = t.dataset.view; selected=0; if(view==='quiz' && myAnswers.every(a=>a!==undefined)) view='mine'; render(); }
+  else if(t.dataset.o!=null){ myAnswers[qi]=+t.dataset.o; qi++; render(); }
+  else if(t.dataset.nav==='skip'){ myAnswers[qi]=null; qi++; render(); }
+  else if(t.dataset.nav==='back'){ qi=Math.max(0,qi-1); render(); }
+  else if(t.dataset.i!=null){ selected=+t.dataset.i; render(); }
+  else if(t.dataset.region){ region=t.dataset.region; selected=0; render(); }
+  else if(t.dataset.go==='quiz'){ view='quiz'; qi=0; myAnswers=QUESTIONS.map(()=>undefined); render(); }
+  else if(t.dataset.go==='restart'){ view='quiz'; qi=0; myAnswers=QUESTIONS.map(()=>undefined); render(); }
+});
+render();
+</script>
+</body>
+</html>
